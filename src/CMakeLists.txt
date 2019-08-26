@@ -7,3 +7,4 @@ include_directories (${CMAKE_BINARY_DIR}/src)
 
 add_subdirectory (server)
 add_subdirectory (manager)
+add_subdirectory (client)

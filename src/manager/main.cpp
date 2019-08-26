@@ -160,11 +160,12 @@ int main (int argc, char** argv)
 						if (connect (fd, addr, addrlen) == 0)
 						{
 							if (ai->ai_family == AF_INET)
+							{
 								c = new TCP_Connection (fd, (const sockaddr_in*) addr);
+								break;
+							}
 							else
 								close (fd);
-
-							break;
 						}
 						else
 							close (fd);

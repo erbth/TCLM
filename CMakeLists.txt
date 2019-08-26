@@ -14,6 +14,7 @@ set (CMAKE_CXX_FLAGS "-O2 -std=c++17")
 set (CMAKE_CXX_FLAGS_DEBUG "-gdwarf-2 -DDEBUG")
 
 include_directories (src)
+include_directories (include)
 
 # Add subdirectories
 add_subdirectory (src)
