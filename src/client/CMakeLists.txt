@@ -5,13 +5,16 @@ add_library (tclm_client SHARED
 	"tclmc_impl.cpp"
 	"tclm_client_exceptions.cpp"
 	"Access_Concentrator.cpp"
+	"request.cpp"
+	"register_process_request.cpp"
 	"../polled_fd.cpp"
 	"../Connection.cpp"
 	"../TCP_Connection.cpp"
 	"../Communications_Manager.cpp"
 	"../stream.c"
 	"../ringbuffer.cpp"
-	"../errno_exception.cpp")
+	"../errno_exception.cpp"
+	"../polled_eventfd.cpp")
 
 target_link_libraries (tclm_client Threads::Threads)
 

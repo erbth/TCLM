@@ -20,34 +20,40 @@ void stream_free (struct stream *s)
 
 int stream_ensure_remaining_capacity (struct stream *s, unsigned long l)
 {
-	if (!s->buffer)
+	if (l > 0)
 	{
-		// Make l a power of 2
-		int i = __builtin_clzl (l);
-
-		if (l ^ (1 << (64 - i)) && i > 0)
-			l = 1 << (64 - (i - 1));
-
-		s->buffer = malloc (l);
 		if (!s->buffer)
-			return -1;
-	}
-	else if (s->capacity - s->pos < l)
-	{
-		unsigned long nc = s->capacity;
+		{
+			// Make l a power of 2
+			if (!(l & (1UL << 63)))
+			{
+				int i = __builtin_clzl (l);
+				l = 1UL << (64 - i);
+			}
 
-		while (nc - s->pos < l && !(nc & (1UL << 63)))
-			nc *= 2;
+			s->buffer = malloc (l);
+			if (!s->buffer)
+				return -1;
 
-		if (nc - s->pos < l)
-			return -1;
+			s->capacity = l;
+		}
+		else if (s->capacity < l + s->pos)
+		{
+			unsigned long nc = s->capacity;
 
-		uint8_t *n = realloc (s->buffer, nc);
-		if (!n)
-			return -1;
+			while (nc < l + s->pos && !(nc & (1UL << 63)))
+				nc *= 2;
 
-		s->buffer = n;
-		s->capacity = nc;
+			if (nc < l + s->pos)
+				return -1;
+
+			uint8_t *n = realloc (s->buffer, nc);
+			if (!n)
+				return -1;
+
+			s->buffer = n;
+			s->capacity = nc;
+		}
 	}
 
 	return 0;

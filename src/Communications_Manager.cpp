@@ -17,21 +17,26 @@ Communications_Manager::~Communications_Manager ()
 	if (epfd >= 0)
 		close (epfd);
 
-	for (auto i = polled_fds.begin(); i != polled_fds.end(); i++)
-	{
-		delete *i;
-	}
 	polled_fds.clear ();
 }
 
 void Communications_Manager::for_each_pfd (std::function<void(const polled_fd*)> f)
 {
+	lock_guard lk(m_polled_fds);
+
 	for (auto i = polled_fds.cbegin(); i != polled_fds.cend(); i++)
-		f (*i);
+		f (i->first);
+}
+
+void Communications_Manager::pefd_read_callback (polled_eventfd *pefd, uint64_t val, void *data)
+{
+	/* Reset the eventfd */
+	pefd->write (0);
 }
 
 bool Communications_Manager::main_loop ()
 {
+	unique_lock elk(m_epfd);
 	bool return_state = true;
 
 	/* Create an epoll instance */
@@ -46,31 +51,51 @@ bool Communications_Manager::main_loop ()
 
 		struct epoll_event event = { 0 };
 
-		for (auto i = polled_fds.begin(); i != polled_fds.end(); i++)
 		{
-			auto pfd = *i;
+			lock_guard plk(m_polled_fds);
 
-			event.data.ptr = pfd;
-			event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
-
-			if (pfd->get_out_enabled ())
-				event.events |= EPOLLOUT;
-
-			if (epoll_ctl (epfd, EPOLL_CTL_ADD, pfd->get_fd(), &event) < 0)
+			for (auto i = polled_fds.begin(); i != polled_fds.end(); i++)
 			{
-				cerr << "Failed to add a fd to the epoll instance." << endl;
-				close (epfd);
-				epfd = -1;
-				return false;
+				auto pfd = i->first;
+
+				event.data.ptr = pfd;
+				event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
+
+				if (pfd->get_out_enabled ())
+					event.events |= EPOLLOUT;
+
+				if (epoll_ctl (epfd, EPOLL_CTL_ADD, pfd->get_fd(), &event) < 0)
+				{
+					cerr << "Failed to add a fd to the epoll instance." << endl;
+					close (epfd);
+					epfd = -1;
+					return false;
+				}
 			}
 		}
+	}
+
+	/* If it does not exist yet, create a polled eventfd. */
+	if (!pefd)
+	{
+		pefd = make_shared<polled_eventfd>();
+		pefd->set_read_callback (pefd_read_callback, this);
+		add_polled_fd (pefd);
 	}
 
 	/* Poll the epoll instance in a loop */
 	struct epoll_event event = { 0 };
 
-	while (!quit_requested)
+	elk.unlock();
+
+	for (;;)
 	{
+		{
+			lock_guard flk(m_flags);
+			if (quit_requested)
+				break;
+		}
+
 		auto r = epoll_wait (epfd, &event, 1, -1);
 
 		if (r < 0 && errno != EINTR)
@@ -112,21 +137,31 @@ bool Communications_Manager::main_loop ()
 
 void Communications_Manager::request_quit ()
 {
+	lock_guard flk(m_flags);
+	lock_guard elk(m_epfd);
+
+	if (pefd)
+		pefd->write(1);
+
 	quit_requested = true;
 }
 
 void Communications_Manager::request_run ()
 {
+	lock_guard lk(m_flags);
 	quit_requested = false;
 }
 
-bool Communications_Manager::add_polled_fd (polled_fd *pfd)
+bool Communications_Manager::add_polled_fd (shared_ptr<polled_fd> pfd)
 {
+	lock_guard elk(m_epfd);
+	lock_guard plk(m_polled_fds);
+
 	if (epfd >= 0)
 	{
 		struct epoll_event event = { 0 };
 		event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
-		event.data.ptr = (void*) pfd;
+		event.data.ptr = (void*) pfd.get();
 
 		if (epoll_ctl (epfd, EPOLL_CTL_ADD, pfd->get_fd(), &event) < 0)
 		{
@@ -135,13 +170,16 @@ bool Communications_Manager::add_polled_fd (polled_fd *pfd)
 		}
 	}
 
-	polled_fds.insert (pfd);
+	polled_fds.insert (pair (pfd.get(), pfd));
 	pfd->set_mgr (this);
 	return true;
 }
 
 void Communications_Manager::destroy_polled_fd (polled_fd *pfd)
 {
+	lock_guard elk(m_epfd);
+	lock_guard plk(m_polled_fds);
+
 	if (epfd >= 0)
 	{
 		if (epoll_ctl (epfd, EPOLL_CTL_DEL, pfd->get_fd(), nullptr) < 0)
@@ -149,11 +187,12 @@ void Communications_Manager::destroy_polled_fd (polled_fd *pfd)
 	}
 
 	polled_fds.erase (pfd);
-	delete pfd;
 }
 
 bool Communications_Manager::fd_enable_out (polled_fd *pfd)
 {
+	lock_guard elk(m_epfd);
+
 	pfd->set_out_enabled (true);
 
 	if (epfd >= 0)
@@ -174,6 +213,8 @@ bool Communications_Manager::fd_enable_out (polled_fd *pfd)
 
 bool Communications_Manager::fd_disable_out (polled_fd *pfd)
 {
+	lock_guard elk(m_epfd);
+
 	pfd->set_out_enabled (false);
 
 	if (epfd >= 0)

@@ -12,7 +12,7 @@ extern "C" {
 class TCP_Connection : public Connection
 {
 protected:
-	struct sockaddr_in addr;
+	const struct sockaddr_in addr;
 
 public:
 	TCP_Connection(int fd, const struct sockaddr_in *addr);

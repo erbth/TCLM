@@ -2,7 +2,7 @@
 #define __POLLED_FD
 
 /* This file belongs to the communications unit. */
-#include "Communications_Manager.h"
+#include <mutex>
 
 /* Prototypes for cyclic include dependencies */
 class Communications_Manager;
@@ -10,6 +10,8 @@ class Communications_Manager;
 class polled_fd
 {
 protected:
+	std::recursive_mutex m;
+
 	int fd;
 	bool close_fd;
 	bool out_enabled;
@@ -31,5 +33,8 @@ public:
 	virtual bool data_in () = 0;
 	virtual bool data_out () = 0;
 };
+
+/* Carefully placed includes */
+#include "Communications_Manager.h"
 
 #endif /* __POLLED_FD */

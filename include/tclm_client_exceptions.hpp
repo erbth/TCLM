@@ -19,6 +19,21 @@ public:
 	const char *what () const noexcept override;
 };
 
+class too_many_processes_exception : public std::exception
+{
+	const char *what() const noexcept override;
+};
+
+class process_holds_locks_exception : public std::exception
+{
+	const char *what() const noexcept override;
+};
+
+class no_such_process_exception : public std::exception
+{
+	const char *what() const noexcept override;
+};
+
 }
 
 #endif /* __TCLM_CLIENT_EXCEPTIONS_HPP */

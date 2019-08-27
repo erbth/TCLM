@@ -10,6 +10,7 @@ add_executable (tclmd
 	"../TCP_Connection.cpp"
 	"../stream.c"
 	"../ringbuffer.cpp"
+	"../polled_eventfd.cpp"
 	"TCP_Listener.cpp"
 	"daemon.cpp"
 

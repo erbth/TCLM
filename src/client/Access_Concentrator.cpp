@@ -1,6 +1,11 @@
 #include "Access_Concentrator.h"
 #include "tclm_client_exceptions.hpp"
 #include "TCP_Connection.h"
+#include "stream.h"
+#include "messages.h"
+#include "message_utils.h"
+#include <iostream>
+#include <new>
 
 extern "C" {
 #include <netdb.h>
@@ -22,10 +27,23 @@ Access_Concentrator::Access_Concentrator (
 	 * ridiculous. */
 	if (!create_tcp_connection())
 		throw cannot_connect_exception (servername, tcp_port, "tcp");
+
+	/* Create a thread for the Communications Manager */
+	cm_thread = thread (cm_thread_func, this);
+}
+
+Access_Concentrator::~Access_Concentrator ()
+{
+	/* Stop the Communications Manager's thread */
+	cm.request_quit();
+	cm_thread.join();
 }
 
 bool Access_Concentrator::create_tcp_connection() noexcept
 {
+	lock_guard clk(m_tcp_connection);
+	lock_guard slk(m_servername);
+
 	if (tcp_connection)
 		return true;
 
@@ -61,7 +79,7 @@ bool Access_Concentrator::create_tcp_connection() noexcept
 						if (ai->ai_family == AF_INET)
 						{
 							try {
-								tcp_connection = make_unique<TCP_Connection>(fd, (const sockaddr_in*) addr);
+								tcp_connection = make_shared<TCP_Connection>(fd, (const sockaddr_in*) addr);
 								break;
 							} catch (...) {
 								close (fd);
@@ -84,5 +102,155 @@ bool Access_Concentrator::create_tcp_connection() noexcept
 		ais = nullptr;
 	}
 
+	if (tcp_connection)
+	{
+		tcp_connection->set_receive_callback (receive_message_tcp, this);
+
+		if (!cm.add_polled_fd (tcp_connection))
+			tcp_connection.reset();
+	}
+
 	return tcp_connection ? true : false;
+}
+
+bool Access_Concentrator::send_message_tcp (struct stream *s)
+{
+	lock_guard lk(m_tcp_connection);
+	if (tcp_connection)
+	{
+		try {
+			tcp_connection->send(s);
+		} catch(bad_alloc) {
+			return false;
+		} catch(...) {
+			stream_free (s);
+			throw;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+bool Access_Concentrator::send_message_auto (struct stream *s)
+{
+	bool ret = send_message_tcp (s);
+
+	if (!ret)
+		stream_free (s);
+
+	return ret;
+}
+
+void Access_Concentrator::receive_message_tcp (Connection *c, struct stream *s, void *data)
+{
+	auto pThis = (Access_Concentrator*) data;
+	pThis->receive_message_tcp_internal (c, s);
+}
+
+void Access_Concentrator::receive_message_tcp_internal (Connection *c, struct stream *s)
+{
+	uint8_t id = stream_read_uint8_t (s);
+	uint32_t length = stream_read_uint32_t (s);
+
+	switch (id)
+	{
+		case MSG_ID_REG_PROC_RESPONSE:
+			receive_register_process_response (c, s, length);
+			break;
+	}
+
+	stream_free (s);
+}
+
+
+/* A Communications Manager in a separate thread */
+void Access_Concentrator::cm_thread_func_internal ()
+{
+	cm.main_loop ();
+}
+
+void Access_Concentrator::cm_thread_func (void *data)
+{
+	auto pThis = (Access_Concentrator*) data;
+	pThis->cm_thread_func_internal ();
+}
+
+
+/* Issue requests */
+void Access_Concentrator::issue_register_process_request (register_process_request *r)
+{
+	/* Find a nonce for the request */
+	{
+		lock_guard nlk(m_register_process_next_nonce);
+
+		r->set_nonce (register_process_next_nonce);
+
+		if (register_process_next_nonce == numeric_limits<uint32_t>::max())
+			register_process_next_nonce = 0;
+		else
+			register_process_next_nonce++;
+	}
+
+	/* Add the request to the list */
+	{
+		lock_guard vlk(m_register_process_requests);
+		register_process_requests.push_back (r);
+	}
+
+	/* Send the message. The function handler failures appropriately */
+	send_register_process_request (r);
+}
+
+
+/* Send messages */
+void Access_Concentrator::send_register_process_request (register_process_request *r)
+{
+	/* Construct a message (this is done befor adding the process to the list
+	 * to ease transactionality) */
+	auto s = stream_new();
+	if (!s)
+		return;
+
+	if (stream_ensure_remaining_capacity (s, 9) != 0)
+	{
+		stream_free (s);
+		return;
+	}
+
+	/* Cannot fail because the stream has enough capacity. */
+	write_message_header (s, MSG_ID_REG_PROC, 4);
+	stream_write_uint32_t (s, r->get_nonce());
+
+	send_message_auto (s);
+}
+
+/* Receive messages */
+void Access_Concentrator::receive_register_process_response (Connection *c, struct stream *s, uint32_t length)
+{
+	uint32_t nonce = stream_read_uint32_t (s);
+	uint16_t status_code = stream_read_uint16_t (s);
+
+	{
+		lock_guard lk(m_register_process_requests);
+
+		/* Find the corresponding request */
+		for (auto i = register_process_requests.begin(); i != register_process_requests.end(); i++)
+		{
+			auto r = *i;
+
+			if (r->get_nonce() == nonce)
+			{
+				/* Answer it */
+				register_process_requests.erase (i);
+
+				if (status_code == RESPONSE_STATUS_SUCCESS && stream_remaining_length (s) >= 4)
+					r->set_id(stream_read_uint32_t (s));
+
+				r->answer (status_code);
+				return;
+			}
+		}
+	}
 }

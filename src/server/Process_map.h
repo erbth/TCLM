@@ -17,6 +17,7 @@ private:
 
 public:
 	Process_map ();
+	~Process_map ();
 
 	/* May throw a too_manu_processes_exception */
 	const uint32_t create ();

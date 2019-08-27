@@ -33,3 +33,21 @@ const char *cannot_connect_exception::what () const noexcept
 	else
 		return "Cannot connect to server.";
 }
+
+/* too_many_processes_exception */
+const char *too_many_processes_exception::what () const noexcept
+{
+	return "Too many processes.";
+}
+
+/* process_holds_locks_exception */
+const char *process_holds_locks_exception::what () const noexcept
+{
+	return "Process holds locks.";
+}
+
+/* no_such_process_exception */
+const char *no_such_process_exception::what () const noexcept
+{
+	return "No such process.";
+}

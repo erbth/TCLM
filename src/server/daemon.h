@@ -22,9 +22,11 @@ protected:
 
 	/* Message handlers */
 	void receive_message_list_connections (Connection *c, struct stream *input, uint32_t length);
+	void receive_message_register_process (Connection *c, struct stream *input, uint32_t length);
+	void receive_message_unregister_process (Connection *c, struct stream *input, uint32_t length);
 
 public:
-	Communications_Manager m;
+	Communications_Manager cm;
 	backend b;
 
 	/* Returns false if an error was encountered. Must not be called more than

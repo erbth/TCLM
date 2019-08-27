@@ -28,6 +28,8 @@ Connection::~Connection ()
 
 void Connection::set_receive_callback (receive_callback_t cb, void *data)
 {
+	lock_guard lk(m_receive);
+
 	receive_callback = cb;
 	receive_callback_data = data;
 }
@@ -36,7 +38,16 @@ void Connection::set_receive_callback (receive_callback_t cb, void *data)
 bool Connection::data_in ()
 {
 	uint8_t buf[10000];
-	ssize_t count = read (fd, buf, sizeof(buf) / sizeof(*buf));
+
+	/* Read from the fd. This requires a lock on the fd. */
+	ssize_t count;
+	{
+		lock_guard glk(m);
+		count = read (fd, buf, sizeof(buf) / sizeof(*buf));
+	}
+
+	/* Afterwards, lock the receive part of the Connection */
+	unique_lock rlk(m_receive);
 
 	if (count > 0)
 	{
@@ -71,7 +82,13 @@ bool Connection::data_in ()
 								stream_seek(s,0);
 								stream_set_length(s,wanted_ib_size);
 
-								receive_callback (this, s, receive_callback_data);
+								auto cb = receive_callback;
+								auto cbd = receive_callback_data;
+
+								rlk.unlock();
+								cb (this, s, cbd);
+								rlk.lock();
+
 								s = nullptr;
 							}
 						}
@@ -100,7 +117,12 @@ bool Connection::data_in ()
 						receive_buffer.read (stream_pointer(s), wanted_ib_size);
 						stream_set_length (s, wanted_ib_size);
 
-						receive_callback (this, s, receive_callback_data);
+						auto cb = receive_callback;
+						auto cbd = receive_callback_data;
+
+						rlk.unlock();
+						cb (this, s, cbd);
+						rlk.lock();
 					}
 					else
 						stream_free (s);
@@ -124,8 +146,14 @@ bool Connection::data_in ()
 
 bool Connection::data_out ()
 {
+	lock_guard slk(m_send);
 	auto s = send_queue.front();
-	auto count = write (fd, stream_pointer (s), stream_remaining_length (s));
+
+	ssize_t count;
+	{
+		lock_guard glk(m);
+		count = write (fd, stream_pointer (s), stream_remaining_length (s));
+	}
 
 	if (count > 0)
 	{
@@ -137,7 +165,10 @@ bool Connection::data_out ()
 			stream_free (s);
 
 			if (send_queue.size() == 0)
+			{
+				lock_guard glk(m);
 				mgr->fd_disable_out (this);
+			}
 		}
 	}
 	else if (count == 0 || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))
@@ -153,7 +184,13 @@ bool Connection::data_out ()
 void Connection::send (struct stream *s)
 {
 	stream_seek (s, 0);
-	send_queue.push (s);
+
+	{
+		lock_guard slk(m_send);
+		send_queue.push (s);
+	}
+
+	lock_guard glk(m);
 
 	if (!out_enabled)
 	{

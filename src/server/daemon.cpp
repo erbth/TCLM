@@ -3,7 +3,9 @@
 #include "daemon.h"
 #include "messages.h"
 #include "message_utils.h"
+#include "backend_exceptions.h"
 #include <iostream>
+#include <new>
 
 extern "C" {
 #include <arpa/inet.h>
@@ -18,20 +20,18 @@ bool daemon::run ()
 
 	/* Create a TCP Listener */
 	try {
-		auto tcpl = new TCP_Listener();
+		auto tcpl = make_shared<TCP_Listener>();
 		tcpl->set_daemon (this);
 
-		if (!m.add_polled_fd (tcpl))
-		{
-			delete tcpl;
+		if (!cm.add_polled_fd (tcpl))
 			return false;
-		}
+
 	} catch (exception &e) {
 		cerr << "Failed to create TCP Listener: " << e.what() << endl;
 		return false;
 	}
 
-	return m.main_loop ();
+	return cm.main_loop ();
 }
 
 
@@ -53,6 +53,14 @@ void daemon::receive_message_internal (Connection *c, struct stream *s)
 		case MSG_ID_LIST_CONNS:
 			receive_message_list_connections (c, s, length);
 			break;
+
+		case MSG_ID_REG_PROC:
+			receive_message_register_process (c, s, length);
+			break;
+
+		case MSG_ID_UNREG_PROC:
+			receive_message_unregister_process (c, s, length);
+			break;
 	}
 
 	stream_free (s);
@@ -64,19 +72,23 @@ void daemon::receive_message_list_connections (Connection *c, struct stream *inp
 	/* Create a new stream */
 	auto s = stream_new();
 	if (!s)
-	{
-		cerr << "Failed to create a new stream." << endl;
-		return;
-	}
+		throw bad_alloc();
 
 	/* Send a list of connections back */
-	write_message_header (s, MSG_ID_LIST_CONNS_RESPONSE, 0);
+	if (!write_message_header (s, MSG_ID_LIST_CONNS_RESPONSE, 0))
+	{
+		stream_free(s);
+		throw bad_alloc();
+	}
 
-	m.for_each_pfd ([s](const polled_fd *pfd){
+	cm.for_each_pfd ([s](const polled_fd *pfd){
 			auto tcp_conn = dynamic_cast<const TCP_Connection*>(pfd);
 			if (tcp_conn)
 			{
 				auto addr = tcp_conn->get_sockaddr();
+
+				if (stream_ensure_remaining_capacity (s, 7) < 0)
+					throw bad_alloc();
 
 				stream_write_uint8_t (s,0);
 				stream_write_uint32_t (s,ntohl(addr->sin_addr.s_addr));
@@ -89,4 +101,61 @@ void daemon::receive_message_list_connections (Connection *c, struct stream *inp
 
 	/* Send the stream */
 	c->send(s);
+}
+
+void daemon::receive_message_register_process (Connection *c, struct stream *input, uint32_t length)
+{
+	uint32_t nonce = stream_read_uint32_t (input);
+
+	auto s = stream_new ();
+	if (!s || stream_ensure_remaining_capacity (s, 15) != 0)
+		throw bad_alloc();
+
+	write_message_header (s, MSG_ID_REG_PROC_RESPONSE, 10);
+	stream_write_uint32_t (s, nonce);
+
+	/* Call the backend */
+	try {
+		auto id = b.register_process ();
+		stream_write_uint16_t (s, RESPONSE_STATUS_SUCCESS);
+		stream_write_uint32_t (s, id);
+
+	} catch (too_many_processes_exception &e) {
+		stream_write_uint16_t (s, RESPONSE_STATUS_TOO_MANY_PROCESSES);
+		update_message_length (s, 11);
+	}
+
+	/* Send a message */
+	c->send (s);
+}
+
+void daemon::receive_message_unregister_process (Connection *c, struct stream *input, uint32_t length)
+{
+	uint32_t id = stream_read_uint32_t (input);
+
+	auto s = stream_new ();
+	if (!s || stream_ensure_remaining_capacity (s, 11) != 0)
+		throw bad_alloc();
+
+	write_message_header (s, MSG_ID_UNREG_PROC_RESPONSE, 6);
+	stream_write_uint32_t (s, id);
+
+	/* Call the backend */
+	switch (b.unregister_process (id))
+	{
+		case PROCESS_UNREGISTER_RESULT_SUCCESS:
+			stream_write_uint16_t (s, RESPONSE_STATUS_SUCCESS);
+			break;
+
+		case PROCESS_UNREGISTER_RESULT_NON_EXISTENT:
+			stream_write_uint16_t (s, RESPONSE_STATUS_NO_SUCH_PROCESS);
+			break;
+
+		case PROCESS_UNREGISTER_RESULT_HOLDS_LOCKS:
+			stream_write_uint16_t (s, RESPONSE_STATUS_PROCESS_HOLDS_LOCKS);
+			break;
+	}
+
+	/* Send a message */
+	c->send (s);
 }

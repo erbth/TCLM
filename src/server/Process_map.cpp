@@ -8,6 +8,12 @@ Process_map::Process_map() : next_id(0)
 {
 }
 
+Process_map::~Process_map()
+{
+	for (auto i = Processes.begin(); i != Processes.end(); i++)
+		delete i->second;
+}
+
 const uint32_t Process_map::create ()
 {
 	unique_lock lk(m);

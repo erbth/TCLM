@@ -20,9 +20,21 @@ int main (int argc, char** argv)
 	}
 
 	cout << "Created a tclmc instance." << endl;
-
 	cout << "Press return to continue." << endl;
 	getchar ();
+
+	uint32_t pid;
+
+	try {
+		pid = tclmc->register_process ();
+	} catch (exception &e) {
+		cerr << e.what() << endl;
+		return EXIT_FAILURE;
+	}
+
+	cout << "Registered a process: id = " << to_string(pid) << "." << endl;
+	cout << "Press return to continue." << endl;
+	getchar();
 
 	return EXIT_SUCCESS;
 }

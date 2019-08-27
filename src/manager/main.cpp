@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 
 extern "C" {
 #include <netdb.h>
@@ -128,7 +129,7 @@ int main (int argc, char** argv)
 	Communications_Manager m;
 
 	{
-		Connection *c = nullptr;
+		shared_ptr<Connection> c;
 
 		struct addrinfo gai_hints = { 0 };
 		gai_hints.ai_family = AF_UNSPEC;
@@ -161,7 +162,7 @@ int main (int argc, char** argv)
 						{
 							if (ai->ai_family == AF_INET)
 							{
-								c = new TCP_Connection (fd, (const sockaddr_in*) addr);
+								c = make_shared<TCP_Connection> (fd, (const sockaddr_in*) addr);
 								break;
 							}
 							else
@@ -192,7 +193,6 @@ int main (int argc, char** argv)
 		if (!s)
 		{
 			cerr << "Out of memory." << endl;
-			delete c;
 			return EXIT_FAILURE;
 		}
 
@@ -201,7 +201,6 @@ int main (int argc, char** argv)
 			if (stream_ensure_remaining_capacity (s, 5) < 0)
 			{
 				cerr << "Out of memory." << endl;
-				delete c;
 				return EXIT_FAILURE;
 			}
 
@@ -217,7 +216,6 @@ int main (int argc, char** argv)
 		if (!m.add_polled_fd (c))
 		{
 			cerr << "Failed to add Connection to a Connection Manager." << endl;
-			delete c;
 			return EXIT_FAILURE;
 		}
 	}

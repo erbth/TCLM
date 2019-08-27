@@ -27,7 +27,10 @@ public:
 			const uint16_t tcp_port = SERVER_TCP_PORT, const uint16_t udp_port = 0);
 	~tclmc_impl () override;
 
+	/* May throw one of the following exceptions (and a stl exception):
+	 *   * too_many_processes_exception */
 	uint32_t register_process () override;
+
 	void unregister_process (uint32_t id) override;
 };
 

@@ -6,6 +6,7 @@
 #include "polled_fd.h"
 #include "stream.h"
 #include "ringbuffer.h"
+#include <mutex>
 #include <queue>
 
 extern "C" {
@@ -19,7 +20,12 @@ public:
 	typedef void (*receive_callback_t) (Connection *c, struct stream *s, void *data);
 
 protected:
+	/* Sending data */
+	std::mutex m_send;
 	std::queue<struct stream*> send_queue;
+
+	/* Receiving data */
+	std::mutex m_receive;
 	ringbuffer receive_buffer;
 
 	/* 0 means unknown because each message has a header of at least 5 bytes. */
@@ -46,7 +52,7 @@ public:
 
 	/* For use by the application which wants to communicate. */
 	/* Swallows the stream that is takes ownership of it and cares for destroying
-	 * it. */
+	 * it only if no exception is thrown. */
 	void send (struct stream *s);
 };
 

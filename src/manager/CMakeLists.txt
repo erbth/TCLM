@@ -10,4 +10,5 @@ add_executable (tclm
 	"../ringbuffer.cpp"
 	"../stream.c"
 	"../Communications_Manager.cpp"
-	"../polled_fd.cpp")
+	"../polled_fd.cpp"
+	"../polled_eventfd.cpp")

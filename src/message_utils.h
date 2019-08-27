@@ -7,17 +7,21 @@
 #include "stream.h"
 
 /* Takes care that the stream's remaining capacity is big enough. */
-inline void write_message_header (struct stream *s, uint8_t id, uint32_t length)
+inline bool write_message_header (struct stream *s, uint8_t id, uint32_t length)
 {
-	stream_ensure_remaining_capacity (s, 5);
+	if (stream_ensure_remaining_capacity (s, 5) != 0)
+		return false;
+
 	stream_write_uint8_t (s, id);
 	stream_write_uint32_t (s, length);
+
+	return true;
 }
 
-inline void update_message_length (struct stream *s, uint32_t payload_length)
+inline void update_message_length (struct stream *s, uint32_t total_length)
 {
 	stream_seek(s,1);
-	stream_write_uint32_t(s, payload_length - 5);
+	stream_write_uint32_t(s, total_length - 5);
 }
 
 #endif /* __MESSAGE_UTILS_H */

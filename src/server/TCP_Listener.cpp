@@ -76,11 +76,9 @@ bool TCP_Listener::data_in ()
 		return true;
 
 	try {
-		auto c = new TCP_Connection (endpoint_fd, &endpoint_addr);
+		auto c = make_shared<TCP_Connection> (endpoint_fd, &endpoint_addr);
 		c->set_receive_callback (daemon::receive_message, (void*) d);
-
-		if (!mgr || !mgr->add_polled_fd (c))
-			delete c;
+		mgr->add_polled_fd (c);
 	} catch (exception &e) {
 		cerr << "Failed to create Connection: " << e.what() << endl;
 		close (endpoint_fd);

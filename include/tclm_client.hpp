@@ -1,7 +1,11 @@
+/* A public header for the C++ TCLM client library.
+ *
+ * Every function may throw a stl exception, i.e. bad_alloc if no memory is
+ * left. */
+
 #ifndef __TCLM_CLIENT_HPP
 #define __TCLM_CLIENT_HPP
 
-/* A public header for the C++ TCLM client library. */
 #include "tclm_client_exceptions.hpp"
 #include <string>
 
