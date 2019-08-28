@@ -159,6 +159,10 @@ void Access_Concentrator::receive_message_tcp_internal (Connection *c, struct st
 		case MSG_ID_REG_PROC_RESPONSE:
 			receive_register_process_response (c, s, length);
 			break;
+
+		case MSG_ID_UNREG_PROC_RESPONSE:
+			receive_unregister_process_response (c, s, length);
+			break;
 	}
 
 	stream_free (s);
@@ -199,16 +203,27 @@ void Access_Concentrator::issue_register_process_request (register_process_reque
 		register_process_requests.push_back (r);
 	}
 
-	/* Send the message. The function handler failures appropriately */
+	/* Send the message. The function handles failures appropriately */
 	send_register_process_request (r);
+}
+
+void Access_Concentrator::issue_unregister_process_request (unregister_process_request *r)
+{
+	/* Add the request to the list */
+	{
+		lock_guard vlk(m_unregister_process_requests);
+		unregister_process_requests.push_back(r);
+	}
+
+	/* Send the message */
+	send_unregister_process_request (r);
 }
 
 
 /* Send messages */
 void Access_Concentrator::send_register_process_request (register_process_request *r)
 {
-	/* Construct a message (this is done befor adding the process to the list
-	 * to ease transactionality) */
+	/* Construct a message */
 	auto s = stream_new();
 	if (!s)
 		return;
@@ -222,6 +237,26 @@ void Access_Concentrator::send_register_process_request (register_process_reques
 	/* Cannot fail because the stream has enough capacity. */
 	write_message_header (s, MSG_ID_REG_PROC, 4);
 	stream_write_uint32_t (s, r->get_nonce());
+
+	send_message_auto (s);
+}
+
+void Access_Concentrator::send_unregister_process_request (unregister_process_request *r)
+{
+	/* Construct a message */
+	auto s = stream_new();
+	if (!s)
+		return;
+
+	if (stream_ensure_remaining_capacity (s,9) != 0)
+	{
+		stream_free (s);
+		return;
+	}
+
+	/* Cannot fail because the stream has enough capacity. */
+	write_message_header (s, MSG_ID_UNREG_PROC, 4);
+	stream_write_uint32_t (s, r->get_id());
 
 	send_message_auto (s);
 }
@@ -248,6 +283,30 @@ void Access_Concentrator::receive_register_process_response (Connection *c, stru
 				if (status_code == RESPONSE_STATUS_SUCCESS && stream_remaining_length (s) >= 4)
 					r->set_id(stream_read_uint32_t (s));
 
+				r->answer (status_code);
+				return;
+			}
+		}
+	}
+}
+
+void Access_Concentrator::receive_unregister_process_response (Connection *c, struct stream *s, uint32_t length)
+{
+	uint32_t id = stream_read_uint32_t(s);
+	uint16_t status_code = stream_read_uint16_t(s);
+
+	{
+		lock_guard lk(m_unregister_process_requests);
+
+		/* Find the corresponding request */
+		for (auto i = unregister_process_requests.begin(); i != unregister_process_requests.end(); i++)
+		{
+			auto r = *i;
+
+			if (r->get_id() == id)
+			{
+				/* Answer it */
+				unregister_process_requests.erase (i);
 				r->answer (status_code);
 				return;
 			}

@@ -54,6 +54,10 @@ void daemon::receive_message_internal (Connection *c, struct stream *s)
 			receive_message_list_connections (c, s, length);
 			break;
 
+		case MSG_ID_LIST_PROCS:
+			receive_message_list_processes (c, s, length);
+			break;
+
 		case MSG_ID_REG_PROC:
 			receive_message_register_process (c, s, length);
 			break;
@@ -88,7 +92,10 @@ void daemon::receive_message_list_connections (Connection *c, struct stream *inp
 				auto addr = tcp_conn->get_sockaddr();
 
 				if (stream_ensure_remaining_capacity (s, 7) < 0)
+				{
+					stream_free (s);
 					throw bad_alloc();
+				}
 
 				stream_write_uint8_t (s,0);
 				stream_write_uint32_t (s,ntohl(addr->sin_addr.s_addr));
@@ -96,7 +103,39 @@ void daemon::receive_message_list_connections (Connection *c, struct stream *inp
 			}
 		});
 
-	/* Update the length of the stream */
+	/* Update the length of the message */
+	update_message_length (s, stream_tell(s));
+
+	/* Send the stream */
+	c->send(s);
+}
+
+void daemon::receive_message_list_processes (Connection *c, struct stream *input, uint32_t length)
+{
+	/* Create new stream */
+	auto s = stream_new ();
+	if (!s)
+		throw bad_alloc();
+
+	if (!write_message_header (s, MSG_ID_LIST_PROCS_RESPONSE, 0))
+	{
+		stream_free (s);
+		throw bad_alloc();
+	}
+
+	/* Add all processes */
+	b.for_each_process ([s](const Process *p){
+			if (stream_ensure_remaining_capacity (s, 8) < 0)
+			{
+				stream_free (s);
+				throw bad_alloc();
+			}
+
+			stream_write_uint32_t (s, p->get_id());
+			stream_write_uint32_t (s, p->get_lock_count());
+		});
+
+	/* Update the message's length */
 	update_message_length (s, stream_tell(s));
 
 	/* Send the stream */

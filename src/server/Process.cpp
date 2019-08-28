@@ -9,14 +9,14 @@ Process::Process (const uint32_t id) : id(id)
 	lock_count = 0;
 }
 
-const uint32_t Process::get_id ()
+const uint32_t Process::get_id () const
 {
 	// It may be required for memory synchronization between different cores
 	lock_guard lk(m);
 	return id;
 }
 
-const uint32_t Process::get_lock_count ()
+const uint32_t Process::get_lock_count () const
 {
 	lock_guard lk(m);
 	return lock_count;

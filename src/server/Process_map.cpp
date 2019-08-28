@@ -14,6 +14,14 @@ Process_map::~Process_map()
 		delete i->second;
 }
 
+void Process_map::for_each_process(function<void(const Process *p)> f) const
+{
+	shared_lock lk(m);
+
+	for (auto i = Processes.begin(); i != Processes.end(); i++)
+		f(i->second);
+}
+
 const uint32_t Process_map::create ()
 {
 	unique_lock lk(m);
@@ -32,19 +40,26 @@ const uint32_t Process_map::create ()
 	return p->get_id();
 }
 
-bool Process_map::try_destroy (Process *p)
+int Process_map::try_destroy (const uint32_t id)
 {
 	unique_lock lk(m);
 
+	/* Try to find it */
+	auto t = Processes.find (id);
+	if (t == Processes.end())
+		return PROCESS_UNREGISTER_RESULT_NON_EXISTENT;
+
+	auto p = t->second;
+
 	/* Look if it can be destroyed */
 	if (p->get_lock_count() > 0)
-		return false;
+		return PROCESS_UNREGISTER_RESULT_HOLDS_LOCKS;
 
 	/* Eventually destroy it */
 	Processes.erase(p->get_id());
 	delete p;
 
-	return true;
+	return PROCESS_UNREGISTER_RESULT_SUCCESS;
 }
 
 std::pair<Process*, shared_lock<shared_mutex>> Process_map::find (const uint32_t id)

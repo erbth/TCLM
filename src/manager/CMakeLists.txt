@@ -12,3 +12,5 @@ add_executable (tclm
 	"../Communications_Manager.cpp"
 	"../polled_fd.cpp"
 	"../polled_eventfd.cpp")
+
+target_link_libraries (tclm Threads::Threads)

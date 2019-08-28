@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <cstdio>
 #include <memory>
 
 using namespace std;
@@ -13,7 +14,7 @@ int main (int argc, char** argv)
 	shared_ptr<tclm_client::tclmc> tclmc;
 		
 	try {
-		tclmc = shared_ptr<tclm_client::tclmc>(tclm_client::tclmc::create("localhost"));
+		tclmc = tclm_client::tclmc::create("localhost");
 	} catch (exception &e) {
 		cerr << e.what() << endl;
 		return EXIT_FAILURE;
@@ -23,16 +24,19 @@ int main (int argc, char** argv)
 	cout << "Press return to continue." << endl;
 	getchar ();
 
-	uint32_t pid;
+	shared_ptr<tclm_client::Process> p1, p2;
 
 	try {
-		pid = tclmc->register_process ();
+		p1 = tclmc->register_process ();
+		p2 = tclmc->register_process ();
 	} catch (exception &e) {
 		cerr << e.what() << endl;
 		return EXIT_FAILURE;
 	}
 
-	cout << "Registered a process: id = " << to_string(pid) << "." << endl;
+	printf ("Registered processes p1 and p2 with ids %d and %d.\n",
+			p1->get_id (), p2->get_id());
+
 	cout << "Press return to continue." << endl;
 	getchar();
 

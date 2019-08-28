@@ -18,6 +18,7 @@
 
 #include "Connection.h"
 #include "register_process_request.h"
+#include "unregister_process_request.h"
 #include "Communications_Manager.h"
 #include "stream.h"
 #include <memory>
@@ -31,6 +32,7 @@ namespace tclm_client {
 /* Prototypes */
 class request;
 class register_process_request;
+class unregister_process_request;
 
 class Access_Concentrator
 {
@@ -81,14 +83,19 @@ protected:
 	std::mutex m_register_process_requests;
 	std::vector<register_process_request*> register_process_requests;
 
+	std::mutex m_unregister_process_requests;
+	std::vector<unregister_process_request*> unregister_process_requests;
+
 	/* Functions for sending messages that can handle send failures
 	 * appropriately. These sould be robust regarding any type of error. I.e.
 	 * they should fail silently in case of OOM conditions, knowing that the
 	 * main thread will try sending again. */
 	void send_register_process_request (register_process_request *r);
+	void send_unregister_process_request (unregister_process_request *r);
 
 	/* Functions for receiving messages */
 	void receive_register_process_response (Connection *c, struct stream *s, uint32_t length);
+	void receive_unregister_process_response (Connection *c, struct stream *s, uint32_t length);
 
 public:
 	Access_Concentrator (const std::string &servername,
@@ -97,6 +104,7 @@ public:
 
 	/* To be used by the requests */
 	void issue_register_process_request (register_process_request *r);
+	void issue_unregister_process_request (unregister_process_request *r);
 };
 
 }

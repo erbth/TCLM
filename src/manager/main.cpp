@@ -2,11 +2,13 @@
 #include "TCP_Connection.h"
 #include "argument_parser.h"
 #include "messages.h"
+#include "message_utils.h"
 #include "stream.h"
 #include "tclm_config.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cinttypes>
 #include <iostream>
 #include <memory>
 
@@ -21,7 +23,7 @@ using namespace std;
 using namespace manager;
 
 /* Handlers for the messages sent by the server */
-void receive_message_list_conns_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+void receive_list_conns_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
 {
 	if (ap->action == "list-connections")
 	{
@@ -44,10 +46,30 @@ void receive_message_list_conns_response (Connection *c, struct stream *s, argum
 						int d = stream_read_uint8_t(s);
 						int port = stream_read_uint16_t(s);
 
-						printf ("%d.%d.%d.%d:%d\n", a,b,c,d, port);
+						printf ("%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ":%" PRIu16 "\n", a,b,c,d, port);
 					}
 					break;
 			}
+		}
+
+		c->get_mgr()->request_quit();
+	}
+}
+
+void receive_list_processes_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+{
+	if (ap->action == "list-processes")
+	{
+		printf ("Registered Processes:\n"
+				"    id               lock_count\n"
+				"-------------------------------------------------------\n");
+
+		while (stream_tell(s) < length)
+		{
+			uint32_t id = stream_read_uint32_t(s);
+			uint32_t lock_count = stream_read_uint32_t(s);
+
+			printf ("%#9" PRIu32 "             %#9" PRIu32 "\n", id, lock_count);
 		}
 
 		c->get_mgr()->request_quit();
@@ -65,14 +87,15 @@ void receive_message (Connection *c, struct stream *s, void *data)
 		uint8_t id = stream_read_uint8_t (s);
 		uint8_t p_length = stream_read_uint32_t (s);
 
-		if (length == p_length + 5)
+		switch (id)
 		{
-			switch (id)
-			{
-				case MSG_ID_LIST_CONNS_RESPONSE:
-					receive_message_list_conns_response (c, s, ap, length);
-					break;
-			}
+			case MSG_ID_LIST_CONNS_RESPONSE:
+				receive_list_conns_response (c, s, ap, length);
+				break;
+
+			case MSG_ID_LIST_PROCS_RESPONSE:
+				receive_list_processes_response (c, s, ap, length);
+				break;
 		}
 	}
 
@@ -87,6 +110,7 @@ void print_help_message ()
 
 		<< "\nActions:\n"
 		<< "    list-connections:    List all connections to the deamon including this one.\n"
+		<< "    list-processes:      List the registered processes with their lock_counts.\n"
 
 		<< "\nParameters:\n"
 		<< "    -h, --help:          Do nothing but print a help message (this one).\n"
@@ -96,7 +120,7 @@ void print_help_message ()
 
 int main (int argc, char** argv)
 {
-	printf ("TCLM Manager for tclmd version %d.%d\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR);
+	printf ("TCLM Manager for tclmd version %d.%d\n\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR);
 
 	argument_parser ap;
 	if (!ap.parse (argc, argv))
@@ -112,6 +136,9 @@ int main (int argc, char** argv)
 	string server_name = "127.0.0.1";
 
 	if (ap.action == "list-connections")
+	{
+	}
+	else if (ap.action == "list-processes")
 	{
 	}
 	else if (ap.action.size() == 0)
@@ -204,9 +231,18 @@ int main (int argc, char** argv)
 				return EXIT_FAILURE;
 			}
 
-			stream_write_uint8_t (s, 7);
+			stream_write_uint8_t (s, MSG_ID_LIST_CONNS);
 			stream_write_uint32_t (s, 0);
 
+			c->send (s);
+		}
+		else if (ap.action == "list-processes")
+		{
+			if (!write_message_header (s, MSG_ID_LIST_PROCS, 0))
+			{
+				cerr << "Out of memory." << endl;
+				return EXIT_FAILURE;
+			}
 			c->send (s);
 		}
 

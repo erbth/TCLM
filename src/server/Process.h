@@ -8,7 +8,7 @@ namespace server {
 class Process
 {
 protected:
-	std::mutex m;
+	mutable std::mutex m;
 
 	// 2 billion concurrent processes should be enough.
 	const uint32_t id;
@@ -20,9 +20,9 @@ protected:
 public:
 	Process (const uint32_t id);
 
-	const uint32_t get_id ();
+	const uint32_t get_id () const;
+	const uint32_t get_lock_count() const;
 
-	const uint32_t get_lock_count();
 	void increase_lock_count();
 	void decrease_lock_count();
 };

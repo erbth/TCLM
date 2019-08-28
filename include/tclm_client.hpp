@@ -8,8 +8,12 @@
 
 #include "tclm_client_exceptions.hpp"
 #include <string>
+#include <memory>
 
 namespace tclm_client {
+
+/* Prototypes */
+class Process;
 
 class tclmc
 {
@@ -22,11 +26,24 @@ public:
 
 	/* May throw a cannot_connect_exception. Does never return nullptr but throw
 	 * an exception. Specifying a port number of 0 means using the default port. */
-	static tclmc *create (const std::string servername,
+	static std::shared_ptr<tclmc> create (const std::string servername,
 			uint16_t tcp_port = 0, uint16_t udp_port = 0);
 
-	virtual uint32_t register_process () = 0;
-	virtual void unregister_process (uint32_t id) = 0;
+	/* May throw one of the following exceptions (and a stl exception):
+	 *   * too_many_processes_exception */
+	virtual std::shared_ptr<Process> register_process () = 0;
+};
+
+class Process
+{
+protected:
+	/* Make the class abstract */
+	Process () {};
+
+public:
+	virtual ~Process () {};
+
+	virtual const uint32_t get_id () const = 0;
 };
 
 }

@@ -5,6 +5,7 @@
 // #include "Lock_Request_map.h"
 // #include "Lock_forest.h"
 #include "Process_map.h"
+#include <functional>
 
 namespace server {
 
@@ -21,6 +22,7 @@ public:
 
 	/* Returns one out of PROCESS_UNREGISTER_RESULT_* */
 	int unregister_process (const uint32_t id);
+	void for_each_process (std::function<void(const Process *p)> f) const;
 };
 
 }
