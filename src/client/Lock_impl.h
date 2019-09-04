@@ -23,11 +23,16 @@ public:
 	bool create (std::shared_ptr<Process> p) override;
 	void destroy(std::shared_ptr<Process> p) override;
 
+	void acquire_S (std::shared_ptr<Process> p) override;
+	void acquire_Splus (std::shared_ptr<Process> p) override;
+	void acquire_X (std::shared_ptr<Process> p) override;
+
 	void release_S (std::shared_ptr<Process> p) override;
 	void release_Splus (std::shared_ptr<Process> p) override;
 	void release_X (std::shared_ptr<Process> p) override;
 
 	/* Mode is one out of MSG_LOCK_MODE_{S,Splus,X} */
+	void acquire (std::shared_ptr<Process> p, uint8_t mode);
 	void release (std::shared_ptr<Process> p, uint8_t mode);
 };
 

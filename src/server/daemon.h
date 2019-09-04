@@ -28,6 +28,7 @@ protected:
 	void receive_message_unregister_process (Connection *c, struct stream *input, uint32_t length);
 	void receive_message_create_lock (Connection *c, struct stream *input, uint32_t length);
 	void receive_message_release_lock (Connection *c, struct stream *input, uint32_t length);
+	void receive_message_acquire_lock (Connection *c, struct stream *input, uint32_t length);
 
 public:
 	Communications_Manager cm;

@@ -36,7 +36,7 @@ public:
 	void for_each_lock (std::function<void(const Lock*l, const uint32_t level)> f) const;
 
 	/* Returns one out of LOCK_ACQUIRE_*, mode is one out of LOCK_REQUEST_MODE_* */
-	// int acquire (Process *p, std::string *path_str, uint8_t mode);
+	int acquire (Process *p, std::string *path_str, uint8_t mode);
 
 	/* Returns one out of LOCK_RELEASE_*, mode is one out of LOCK_REQUEST_MODE_* */
 	int release (Process *p, std::string *path_str, uint8_t mode);

@@ -169,6 +169,10 @@ void Access_Concentrator::receive_message_tcp_internal (Connection *c, struct st
 			receive_create_lock_update (c, s, length);
 			break;
 
+		case MSG_ID_ACQUIRE_LOCK_UPDATE:
+			receive_acquire_lock_update (c, s, length);
+			break;
+
 		case MSG_ID_RELEASE_LOCK_RESPONSE:
 			receive_release_lock_response (c, s, length);
 			break;
@@ -238,6 +242,18 @@ void Access_Concentrator::issue_create_lock_request (create_lock_request *r)
 
 	/* Send the message */
 	send_create_lock_request (r);
+}
+
+void Access_Concentrator::issue_acquire_lock_request (acquire_lock_request *r)
+{
+	/* Add the request to the list */
+	{
+		scoped_lock vlk(m_acquire_lock_requests);
+		acquire_lock_requests.insert (pair(tuple(r->get_pid(),*(r->get_path()),r->get_mode()), r));
+	}
+
+	/* Send the message */
+	send_acquire_lock_request (r);
 }
 
 void Access_Concentrator::issue_release_lock_request (release_lock_request *r)
@@ -318,6 +334,33 @@ void Access_Concentrator::send_create_lock_request (create_lock_request *r)
 	send_message_auto (s);
 }
 
+void Access_Concentrator::send_acquire_lock_request (acquire_lock_request *r)
+{
+	/* Construct a message */
+	auto s = stream_new ();
+	if (!s)
+		return;
+
+	if (stream_ensure_remaining_capacity (s, 5 + 4 + 2 + r->get_path()->size() + 1) != 0)
+	{
+		stream_free (s);
+		return;
+	}
+
+	/* Cannot fail because the stream has enough capacity */
+	write_message_header (s, MSG_ID_ACQUIRE_LOCK, 4 + 2 + r->get_path()->size() + 1);
+	stream_write_uint32_t (s, r->get_pid());
+	stream_write_uint16_t (s, r->get_path()->size());
+
+	memcpy (stream_pointer(s), r->get_path()->c_str(), r->get_path()->size());
+	stream_set_length (s, stream_tell(s) + r->get_path()->size());
+	stream_seek (s, stream_tell(s) + r->get_path()->size());
+
+	stream_write_uint8_t (s, r->get_mode());
+
+	send_message_auto (s);
+}
+
 void Access_Concentrator::send_release_lock_request (release_lock_request *r)
 {
 	/* Construct a message */
@@ -344,6 +387,7 @@ void Access_Concentrator::send_release_lock_request (release_lock_request *r)
 
 	send_message_auto (s);
 }
+
 
 /* Receive messages */
 void Access_Concentrator::receive_register_process_response (Connection *c, struct stream *s, uint32_t length)
@@ -419,6 +463,35 @@ void Access_Concentrator::receive_create_lock_update (Connection *c, struct stre
 			if (status_code != RESPONSE_STATUS_QUEUED)
 			{
 				create_lock_requests.erase (i);
+				r->answer (status_code);
+				return;
+			}
+		}
+	}
+}
+
+void Access_Concentrator::receive_acquire_lock_update (Connection *c, struct stream *s, uint32_t length)
+{
+	uint32_t pid = stream_read_uint32_t (s);
+	uint16_t path_length = stream_read_uint16_t (s);
+	string path ((char*) stream_pointer(s), path_length);
+	stream_seek (s, stream_tell(s) + path_length);
+	uint8_t mode = stream_read_uint8_t (s);
+	uint16_t status_code = stream_read_uint16_t (s);
+
+	{
+		scoped_lock lk(m_acquire_lock_requests);
+
+		/* Find the corresponding request */
+		auto i = acquire_lock_requests.find (tuple(pid, path, mode));
+		if (i != acquire_lock_requests.end())
+		{
+			auto r = i->second;
+
+			/* Answer it if appropriate */
+			if (status_code != RESPONSE_STATUS_QUEUED)
+			{
+				acquire_lock_requests.erase (i);
 				r->answer (status_code);
 				return;
 			}

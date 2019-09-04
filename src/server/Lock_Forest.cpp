@@ -1,4 +1,5 @@
 #include "Lock_Forest.h"
+#include "Lock_Request.h"
 #include <algorithm>
 
 using namespace std;
@@ -81,6 +82,20 @@ int Lock_Forest::create (Process *p, string *path_str)
 			/* Cannot happen. */
 			return LOCK_CREATE_EXISTS;
 	}
+}
+
+int Lock_Forest::acquire (Process *p, std::string *path_str, uint8_t mode)
+{
+	shared_lock lk(m);
+	auto path = split_path (path_str);
+
+	/* Look if the root exists */
+	auto i_root = roots.find((*path)[0]);
+	if (i_root == roots.end())
+		return LOCK_ACQUIRE_NON_EXISTENT;
+
+	/* Try to acquire it */
+	return i_root->second->acquire (make_shared<Lock_Request>(mode, p, path));
 }
 
 int Lock_Forest::release (Process *p, std::string *path_str, uint8_t mode)

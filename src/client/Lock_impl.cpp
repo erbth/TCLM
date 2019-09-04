@@ -1,5 +1,6 @@
 #include "Lock_impl.h"
 #include "create_lock_request.h"
+#include "acquire_lock_request.h"
 #include "release_lock_request.h"
 #include "messages.h"
 #include "tclm_client_exceptions.hpp"
@@ -37,6 +38,40 @@ bool Lock_impl::create (std::shared_ptr<Process> p)
 
 void Lock_impl::destroy (std::shared_ptr<Process> p)
 {
+}
+
+
+void Lock_impl::acquire_S (shared_ptr<Process> p)
+{
+	acquire (p, MSG_LOCK_MODE_S);
+}
+
+void Lock_impl::acquire_Splus (shared_ptr<Process> p)
+{
+	acquire (p, MSG_LOCK_MODE_Splus);
+}
+
+void Lock_impl::acquire_X (shared_ptr<Process> p)
+{
+	acquire (p, MSG_LOCK_MODE_X);
+}
+
+void Lock_impl::acquire (shared_ptr<Process> p, uint8_t mode)
+{
+	auto r = make_unique<acquire_lock_request> (p->get_id(), &path, mode);
+
+	switch (r->issue (&(tclmc->ac)))
+	{
+		case RESPONSE_STATUS_SUCCESS:
+			return;
+
+		case RESPONSE_STATUS_NO_SUCH_PROCESS:
+			throw no_such_process_exception ();
+
+		case RESPONSE_STATUS_NO_SUCH_LOCK:
+		default:
+			throw no_such_lock_exception ();
+	}
 }
 
 void Lock_impl::release_S (shared_ptr<Process> p)

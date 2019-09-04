@@ -1,5 +1,4 @@
 #include "release_lock_request.h"
-#include <iostream>
 
 using namespace std;
 using namespace tclm_client;

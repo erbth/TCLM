@@ -73,5 +73,31 @@ int main (int argc, char** argv)
 	cout << "Press return to continue." << endl;
 	getchar();
 
+	/* Acquire it again, however this time is S mode */
+	try {
+		root1->acquire_S (p2);
+	} catch (exception &e) {
+		cerr << e.what() << endl;
+		return EXIT_FAILURE;
+	}
+
+	printf ("Acquired the lock I created above in S mode.\n");
+
+	cout << "Press return to continue." << endl;
+	getchar();
+
+	/* Release it again. */
+	try {
+		root1->release_S (p2);
+	} catch (exception &e) {
+		cerr << e.what() << endl;
+		return EXIT_FAILURE;
+	}
+
+	printf ("Unlocked the lock I created above again.\n");
+
+	cout << "Press return to continue." << endl;
+	getchar();
+
 	return EXIT_SUCCESS;
 }

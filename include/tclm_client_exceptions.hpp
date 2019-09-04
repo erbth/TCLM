@@ -39,6 +39,11 @@ class lock_not_held_exception : public std::exception
 	const char *what() const noexcept override;
 };
 
+class no_such_lock_exception : public std::exception
+{
+	const char *what() const noexcept override;
+};
+
 }
 
 #endif /* __TCLM_CLIENT_EXCEPTIONS_HPP */

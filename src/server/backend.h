@@ -26,6 +26,10 @@ public:
 	/* Returns one out of CREATE_LOCK_RESULT_* */
 	int create_lock (const uint32_t pid, std::string *path);
 
+	/* Returns one out of ACQUIRE_LOCK_RESULT_* and taked one out of LOCK_REQUEST_MODE_*
+	 * for mode */
+	int acquire_lock (const uint32_t pid, std::string *path, uint8_t mode);
+
 	/* Returns one out of RELEASE_LOCK_RESULT_* and takes one out of LOCK_REQUEST_MODE_*
 	 * for mode. */
 	int release_lock (const uint32_t pid, std::string *path, uint8_t mode);

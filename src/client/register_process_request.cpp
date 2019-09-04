@@ -1,5 +1,4 @@
 #include "register_process_request.h"
-#include <iostream>
 
 using namespace std;
 using namespace tclm_client;

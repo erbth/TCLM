@@ -44,6 +44,30 @@ int backend::create_lock (const uint32_t pid, string *path)
 	}
 }
 
+int backend::acquire_lock (const uint32_t pid, string *path, uint8_t mode)
+{
+	/* Find the process object */
+	auto pt = Processes.find (pid);
+	auto p = pt.first;
+
+	if (!p)
+		return ACQUIRE_LOCK_RESULT_NO_SUCH_PROCESS;
+
+	/* Acquire the lock */
+	switch (Forest.acquire (p, path, mode))
+	{
+		case LOCK_ACQUIRE_ACQUIRED:
+			return ACQUIRE_LOCK_RESULT_ACQUIRED;
+
+		case LOCK_ACQUIRE_QUEUED:
+			return ACQUIRE_LOCK_RESULT_QUEUED;
+
+		case LOCK_ACQUIRE_NON_EXISTENT:
+		default:
+			return ACQUIRE_LOCK_RESULT_NO_SUCH_LOCK;
+	}
+}
+
 int backend::release_lock (const uint32_t pid, string *path, uint8_t mode)
 {
 	/* Find the process object */
@@ -54,7 +78,15 @@ int backend::release_lock (const uint32_t pid, string *path, uint8_t mode)
 		return RELEASE_LOCK_RESULT_NO_SUCH_PROCESS;
 
 	/* Release the lock */
-	return Forest.release (p, path, mode);
+	switch (Forest.release (p, path, mode))
+	{
+		case LOCK_RELEASE_SUCCESS:
+			return RELEASE_LOCK_RESULT_RELEASED;
+
+		case LOCK_RELEASE_NOT_HELD:
+		default:
+			return RELEASE_LOCK_RESULT_NOT_HELD;
+	}
 }
 
 void backend::for_each_lock (function<void(const Lock *l, const uint32_t level)> f) const

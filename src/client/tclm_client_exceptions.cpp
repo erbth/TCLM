@@ -57,3 +57,9 @@ const char *lock_not_held_exception::what () const noexcept
 {
 	return "Lock not held in this mode.";
 }
+
+/* no_such_lock_exception */
+const char *no_such_lock_exception::what () const noexcept
+{
+	return "No such lock.";
+}
