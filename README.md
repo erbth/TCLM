@@ -20,10 +20,10 @@ packages being built concurrently which may have to depend on that package).
 Therefore, TCLM is a centralized, multiple granularity read-write lock manager.
 
 ## A thought on recursive locks
-Are recursive locks more powerful than `normal' locks? I mean can we do more
+Are recursive locks more powerful than \`normal' locks? I mean can we do more
 having recursive locks? On point is clear, they solve the problem of functions
 being called from external code and thus having to lock used resources, or by
-internal code which already locks the resources. With a `normal' mutex i.e. this
+internal code which already locks the resources. With a \`normal' mutex i.e. this
 would result in a deadlock because the called function sould wait for the
 calling function to unlock their common resources. Of course this cannot happen
 because the unlocking code will never be reached.
@@ -37,7 +37,7 @@ same functionality as a recursive lock does with a normal lock, provided it
 allows for querying it's state, which can i.e. be achieved with a thread local
 variable that tracks the acquired locks.
 
-Hence recursive locks do not provide more power than a `normal' lock. In fact
+Hence recursive locks do not provide more power than a \`normal' lock. In fact
 the described algorithm shifts the usual implementation of a recursive mutex, by
 a spinlock, into the client code.
 
