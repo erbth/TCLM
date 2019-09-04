@@ -34,3 +34,8 @@ shared_ptr<Process> tclmc_impl::register_process ()
 
 	throw "???";
 }
+
+shared_ptr<Lock> tclmc_impl::define_lock (const string &path)
+{
+	return make_shared<Lock_impl> (shared_from_this(), path);
+}

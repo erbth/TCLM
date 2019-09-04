@@ -3,6 +3,7 @@
 
 #include "tclm_client.hpp"
 #include "tclmc_impl.h"
+#include "Lock_impl.h"
 #include <memory>
 
 namespace tclm_client {

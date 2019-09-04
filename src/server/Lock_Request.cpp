@@ -3,15 +3,10 @@
 using namespace server;
 using namespace std;
 
-Lock_Request::Lock_Request (const uint32_t id, const bool release,
-		const bool write, Process *requester) :
-	id(id), release(release), write(write), requester(requester)
+Lock_Request::Lock_Request (const uint8_t mode, Process *requester,
+			std::shared_ptr<std::vector<std::string>> path,
+			bool create_missing) :
+	mode(mode), requester(requester), path(path), level(path->size() - 1),
+			create_missing(create_missing)
 {
-}
-
-const uint32_t Lock_Request::get_id ()
-{
-	/* This may be needed for memory synchronization */
-	lock_guard lk(m);
-	return id;
 }

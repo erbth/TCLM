@@ -14,7 +14,7 @@ protected:
 	const uint32_t id;
 
 	/* This counter helps to make sure the Process does not hold any lock when
-	 * unregistered. */
+	 * unregistered. It includes the count of pending lock requests. */
 	uint32_t lock_count;
 
 public:

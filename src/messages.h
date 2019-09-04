@@ -12,6 +12,10 @@
 #define MSG_ID_LIST_PROCS_RESPONSE				0x06
 #define MSG_ID_LIST_CONNS						0x07
 #define MSG_ID_LIST_CONNS_RESPONSE				0x08
+#define MSG_ID_LIST_LOCKS						0x09
+#define MSG_ID_LIST_LOCKS_RESPONSE				0x0A
+#define MSG_ID_CREATE_LOCK						0x0B
+#define MSG_ID_CREATE_LOCK_UPDATE				0x0C
 
 /* server_error codes */
 #define SE_MSG_TOO_LONG							0x0001
@@ -22,5 +26,14 @@
 #define RESPONSE_STATUS_TOO_MANY_PROCESSES		0x0001
 #define RESPONSE_STATUS_PROCESS_HOLDS_LOCKS		0x0002
 #define RESPONSE_STATUS_NO_SUCH_PROCESS			0x0003
+#define RESPONSE_STATUS_QUEUED					0x0004
+#define RESPONSE_STATUS_LOCK_EXISTS				0x0005
+#define RESPONSE_STATUS_NO_SUCH_LOCK			0x0006
+#define RESPONSE_STATUS_NOT_LOCKED				0x0007
+
+/* Lock modes in acquire_lock and release_lock messages */
+#define MSG_LOCK_MODE_S							0x00
+#define MSG_LOCK_MODE_Splus						0x01
+#define MSG_LOCK_MODE_X							0x02
 
 #endif /* __MESSAGES_H */

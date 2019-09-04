@@ -76,6 +76,38 @@ void receive_list_processes_response (Connection *c, struct stream *s, argument_
 	}
 }
 
+void receive_list_locks_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+{
+	if (ap->action == "list-locks")
+	{
+		printf ("Created Locks:\n"
+				"name:status\n"
+				"-------------------------------------------------------\n");
+
+		while (stream_tell(s) < length)
+		{
+			uint32_t level = stream_read_uint32_t (s);
+			uint16_t strlength = stream_read_uint16_t (s);
+			string name((char*) stream_pointer(s), strlength);
+			stream_seek (s, stream_tell(s) + strlength);
+			uint8_t status_bits = stream_read_uint8_t (s);
+
+			string indent;
+			for (uint32_t i = 0; i < level; i++)
+				indent += "  ";
+
+			string status =
+					string(status_bits & 0x4 ? "S" : " ")
+					+ (status_bits & 0x2 ? "S+" : " ")
+					+ (status_bits & 0x1 ? "X" : " ");
+
+			printf ("%s%s:%s\n", indent.c_str(), name.c_str(), status.c_str());
+		}
+
+		c->get_mgr()->request_quit();
+	}
+}
+
 /* Receive a message */
 void receive_message (Connection *c, struct stream *s, void *data)
 {
@@ -96,6 +128,10 @@ void receive_message (Connection *c, struct stream *s, void *data)
 			case MSG_ID_LIST_PROCS_RESPONSE:
 				receive_list_processes_response (c, s, ap, length);
 				break;
+
+			case MSG_ID_LIST_LOCKS_RESPONSE:
+				receive_list_locks_response (c, s, ap, length);
+				break;
 		}
 	}
 
@@ -111,6 +147,7 @@ void print_help_message ()
 		<< "\nActions:\n"
 		<< "    list-connections:    List all connections to the deamon including this one.\n"
 		<< "    list-processes:      List the registered processes with their lock_counts.\n"
+		<< "    list-locks:          List all locks and their status.\n"
 
 		<< "\nParameters:\n"
 		<< "    -h, --help:          Do nothing but print a help message (this one).\n"
@@ -136,11 +173,11 @@ int main (int argc, char** argv)
 	string server_name = "127.0.0.1";
 
 	if (ap.action == "list-connections")
-	{
-	}
+	{}
 	else if (ap.action == "list-processes")
-	{
-	}
+	{}
+	else if (ap.action == "list-locks")
+	{}
 	else if (ap.action.size() == 0)
 	{
 		cerr << "No action specified." << endl;
@@ -244,6 +281,15 @@ int main (int argc, char** argv)
 				return EXIT_FAILURE;
 			}
 			c->send (s);
+		}
+		else if (ap.action == "list-locks")
+		{
+			if (!write_message_header (s, MSG_ID_LIST_LOCKS, 0))
+			{
+				cerr << "Out of memory." << endl;
+				return EXIT_FAILURE;
+			}
+			c->send(s);
 		}
 
 		/* Add the Connection afterwards to the Connection Manager because from that

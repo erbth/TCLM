@@ -4,6 +4,7 @@
 #include "stream.h"
 #include "messages.h"
 #include "message_utils.h"
+#include <cstring>
 #include <iostream>
 #include <new>
 
@@ -163,6 +164,10 @@ void Access_Concentrator::receive_message_tcp_internal (Connection *c, struct st
 		case MSG_ID_UNREG_PROC_RESPONSE:
 			receive_unregister_process_response (c, s, length);
 			break;
+
+		case MSG_ID_CREATE_LOCK_UPDATE:
+			receive_create_lock_update (c, s, length);
+			break;
 	}
 
 	stream_free (s);
@@ -219,6 +224,18 @@ void Access_Concentrator::issue_unregister_process_request (unregister_process_r
 	send_unregister_process_request (r);
 }
 
+void Access_Concentrator::issue_create_lock_request (create_lock_request *r)
+{
+	/* Add the request to the list */
+	{
+		scoped_lock vlk(m_create_lock_requests);
+		create_lock_requests.insert(pair(pair(r->get_pid(), *(r->get_path())), r));
+	}
+
+	/* Send the message */
+	send_create_lock_request (r);
+}
+
 
 /* Send messages */
 void Access_Concentrator::send_register_process_request (register_process_request *r)
@@ -257,6 +274,30 @@ void Access_Concentrator::send_unregister_process_request (unregister_process_re
 	/* Cannot fail because the stream has enough capacity. */
 	write_message_header (s, MSG_ID_UNREG_PROC, 4);
 	stream_write_uint32_t (s, r->get_id());
+
+	send_message_auto (s);
+}
+
+void Access_Concentrator::send_create_lock_request (create_lock_request *r)
+{
+	/* Construct a message */
+	auto s = stream_new ();
+	if (!s)
+		return;
+
+	if (stream_ensure_remaining_capacity (s, 5 + 4 + 2 + r->get_path()->size()) != 0)
+	{
+		stream_free (s);
+		return;
+	}
+
+	/* Cannot fail because the stream has enough capacity. */
+	write_message_header (s, MSG_ID_CREATE_LOCK, 4 + 2 + r->get_path()->size());
+	stream_write_uint32_t (s, r->get_pid());
+	stream_write_uint16_t (s, r->get_path()->size());
+
+	memcpy (stream_pointer(s), r->get_path()->c_str(), r->get_path()->size());
+	stream_set_length (s, stream_tell(s) + r->get_path()->size());
 
 	send_message_auto (s);
 }
@@ -307,6 +348,34 @@ void Access_Concentrator::receive_unregister_process_response (Connection *c, st
 			{
 				/* Answer it */
 				unregister_process_requests.erase (i);
+				r->answer (status_code);
+				return;
+			}
+		}
+	}
+}
+
+void Access_Concentrator::receive_create_lock_update (Connection *c, struct stream *s, uint32_t length)
+{
+	uint32_t pid = stream_read_uint32_t(s);
+	uint16_t path_length = stream_read_uint16_t(s);
+	string path((char*) stream_pointer(s), path_length);
+	stream_seek (s, stream_tell(s) + path_length);
+	uint16_t status_code = stream_read_uint16_t (s);
+
+	{
+		lock_guard lk(m_create_lock_requests);
+
+		/* Find the corresponding request */
+		auto i = create_lock_requests.find(pair(pid,path));
+		if (i != create_lock_requests.end())
+		{
+			auto r = i->second;
+
+			/* Answer it if appropriate */
+			if (status_code != RESPONSE_STATUS_QUEUED)
+			{
+				create_lock_requests.erase (i);
 				r->answer (status_code);
 				return;
 			}

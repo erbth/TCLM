@@ -1,32 +1,52 @@
 #ifndef __LOCK_REQUEST_H
 #define __LOCK_REQUEST_H
 
-#include "Process.h"
-#include <mutex>
+#include <memory>
+#include <string>
+#include <vector>
+
+/* No mutex required since the Lock Request will be protected by the lock it
+ * is enqueued at. */
+
+/* Definitions of lock modes */
+#define LOCK_REQUEST_MODE_S			0x00
+#define LOCK_REQUEST_MODE_Splus		0x01
+#define LOCK_REQUEST_MODE_X			0x02
 
 namespace server {
 
+/* Prototypes */
+class Process;
+
 class Lock_Request
 {
-protected:
-	std::mutex m;
+public:
+	/* Lock mode */
+	const uint8_t mode;
 
-	/* To identify the request */
-	const uint32_t id;
-
-	/* Who and what? */
+	/* Who ? */
 	Process *requester;
 
-	const bool release;
-	const bool write;
+	/* What ? */
+	std::shared_ptr<std::vector<std::string>> path;
+	uint32_t current_level = 0;
+	const uint32_t level;
 
-public:
-	Lock_Request (const uint32_t id, const bool release, const bool write,
-			Process *requester);
+	bool create_missing;
 
-	const uint32_t get_id ();
+	/* Set to true by the Lock implementation if a lock has been created to
+	 * distinguish between acquiring an existing lock and creating a new one
+	 * when create_missing is true. */
+	bool lock_created = false;
+
+	Lock_Request (const uint8_t mode, Process *requester,
+			std::shared_ptr<std::vector<std::string>> path,
+			bool create_missing = false);
 };
 
 }
+
+/* Carefully placed includes */
+#include "Process.h"
 
 #endif /* __LOCK_REQUEST_H */

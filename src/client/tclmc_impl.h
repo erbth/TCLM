@@ -18,6 +18,7 @@ namespace tclm_client {
 
 /* Prototypes */
 class Process_impl;
+class Lock_impl;
 
 class tclmc_impl : public tclmc, public std::enable_shared_from_this<tclmc_impl>
 {
@@ -25,6 +26,7 @@ protected:
 	Access_Concentrator ac;
 
 	friend Process_impl;
+	friend Lock_impl;
 
 public:
 	/* May throw a cannot_connect_exception */
@@ -33,6 +35,7 @@ public:
 	~tclmc_impl () override;
 
 	std::shared_ptr<Process> register_process () override;
+	std::shared_ptr<Lock> define_lock (const std::string &path) override;
 };
 
 }

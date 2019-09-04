@@ -17,6 +17,9 @@ add_executable (tclmd
 	"backend_exceptions.cpp"
 	"backend.cpp"
 	"Process_map.cpp"
-	"Process.cpp")
+	"Process.cpp"
+	"Lock.cpp"
+	"Lock_Request.cpp"
+	"Lock_Forest.cpp")
 
 target_link_libraries (tclmd Threads::Threads)

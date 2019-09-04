@@ -14,6 +14,7 @@ namespace tclm_client {
 
 /* Prototypes */
 class Process;
+class Lock;
 
 class tclmc
 {
@@ -32,6 +33,7 @@ public:
 	/* May throw one of the following exceptions (and a stl exception):
 	 *   * too_many_processes_exception */
 	virtual std::shared_ptr<Process> register_process () = 0;
+	virtual std::shared_ptr<Lock> define_lock (const std::string &path) = 0;
 };
 
 class Process
@@ -44,6 +46,20 @@ public:
 	virtual ~Process () {};
 
 	virtual const uint32_t get_id () const = 0;
+};
+
+class Lock
+{
+protected:
+	/* Make the class abstract */
+	Lock () {};
+
+public:
+	virtual ~Lock () {};
+
+	virtual const std::string get_path () const = 0;
+	virtual bool create (std::shared_ptr<Process> p) = 0;
+	virtual void destroy(std::shared_ptr<Process> p) = 0;
 };
 
 }

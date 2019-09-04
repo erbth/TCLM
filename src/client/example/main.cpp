@@ -40,5 +40,25 @@ int main (int argc, char** argv)
 	cout << "Press return to continue." << endl;
 	getchar();
 
+	/* Create a lock */
+	shared_ptr<tclm_client::Lock> root1;
+	bool c;
+
+	try {
+		root1 = tclmc->define_lock ("root1");
+		c = root1->create (p1);
+	} catch (exception &e) {
+		cerr << e.what() << endl;
+		return EXIT_FAILURE;
+	}
+
+	if (c)
+		printf ("Created a lock with path %s.\n", root1->get_path().c_str());
+	else
+		printf ("Lock with path %s exists already, obtained only an X lock.\n", root1->get_path().c_str());
+
+	cout << "Press return to continue." << endl;
+	getchar();
+
 	return EXIT_SUCCESS;
 }
