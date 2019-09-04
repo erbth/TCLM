@@ -20,6 +20,7 @@
 #include "register_process_request.h"
 #include "unregister_process_request.h"
 #include "create_lock_request.h"
+#include "release_lock_request.h"
 #include "Communications_Manager.h"
 #include "stream.h"
 #include <map>
@@ -27,6 +28,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 namespace tclm_client {
@@ -36,6 +38,7 @@ class request;
 class register_process_request;
 class unregister_process_request;
 class create_lock_request;
+class release_lock_request;
 
 class Access_Concentrator
 {
@@ -93,6 +96,10 @@ protected:
 	std::mutex m_create_lock_requests;
 	std::map<std::pair<uint32_t,std::string>, create_lock_request*> create_lock_requests;
 
+	/* A map of (pid,lock_path,mode) into release_lock_requests */
+	std::mutex m_release_lock_requests;
+	std::map<std::tuple<uint32_t,std::string,uint8_t>, release_lock_request*> release_lock_requests;
+
 	/* Functions for sending messages that can handle send failures
 	 * appropriately. These sould be robust regarding any type of error. I.e.
 	 * they should fail silently in case of OOM conditions, knowing that the
@@ -100,11 +107,13 @@ protected:
 	void send_register_process_request (register_process_request *r);
 	void send_unregister_process_request (unregister_process_request *r);
 	void send_create_lock_request (create_lock_request *r);
+	void send_release_lock_request (release_lock_request *r);
 
 	/* Functions for receiving messages */
 	void receive_register_process_response (Connection *c, struct stream *s, uint32_t length);
 	void receive_unregister_process_response (Connection *c, struct stream *s, uint32_t length);
 	void receive_create_lock_update (Connection *c, struct stream *s, uint32_t length);
+	void receive_release_lock_response (Connection *c, struct stream *s, uint32_t length);
 
 public:
 	Access_Concentrator (const std::string &servername,
@@ -115,6 +124,7 @@ public:
 	void issue_register_process_request (register_process_request *r);
 	void issue_unregister_process_request (unregister_process_request *r);
 	void issue_create_lock_request (create_lock_request *r);
+	void issue_release_lock_request (release_lock_request *r);
 };
 
 }

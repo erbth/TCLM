@@ -1,6 +1,7 @@
 #ifndef __LOCK_REQUEST_H
 #define __LOCK_REQUEST_H
 
+#include "messages.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,9 +10,9 @@
  * is enqueued at. */
 
 /* Definitions of lock modes */
-#define LOCK_REQUEST_MODE_S			0x00
-#define LOCK_REQUEST_MODE_Splus		0x01
-#define LOCK_REQUEST_MODE_X			0x02
+#define LOCK_REQUEST_MODE_S			MSG_LOCK_MODE_S
+#define LOCK_REQUEST_MODE_Splus		MSG_LOCK_MODE_Splus
+#define LOCK_REQUEST_MODE_X			MSG_LOCK_MODE_X
 
 namespace server {
 

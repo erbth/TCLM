@@ -42,8 +42,8 @@ protected:
 
 	// For tracking the Lock's state
 	std::set<Process *> lockers_S;
-	Process *locker_Splus;
-	Process *locker_X;
+	Process *locker_Splus = nullptr;
+	Process *locker_X = nullptr;
 
 	std::set<Process *> lockers_IS;
 	std::set<Process *> lockers_ISplus;
@@ -68,6 +68,9 @@ public:
 	/* Returns one of LOCK_RELEASE_*. It doesn't distinguish between locks that
 	 * are not held and those which do not exist, because non-existent locks are
 	 * obviously not held. */
+	int release (Process *p, uint8_t mode,
+			std::shared_ptr<std::vector<std::string>> path);
+
 	int release (Process *p, uint8_t mode,
 			std::shared_ptr<std::vector<std::string>> path,
 			uint32_t current_level, uint32_t level);

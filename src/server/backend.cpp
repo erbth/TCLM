@@ -25,7 +25,7 @@ int backend::create_lock (const uint32_t pid, string *path)
 	auto p = t.first;
 
 	if (!p)
-		return CREATE_LOCK_NO_SUCH_PROCESS;
+		return CREATE_LOCK_RESULT_NO_SUCH_PROCESS;
 
 	/* Create the Lock */
 	auto ret = Forest.create (p, path);
@@ -42,6 +42,19 @@ int backend::create_lock (const uint32_t pid, string *path)
 		default:
 			return CREATE_LOCK_RESULT_EXISTS;
 	}
+}
+
+int backend::release_lock (const uint32_t pid, string *path, uint8_t mode)
+{
+	/* Find the process object */
+	auto pt = Processes.find (pid);
+	auto p = pt.first;
+
+	if (!p)
+		return RELEASE_LOCK_RESULT_NO_SUCH_PROCESS;
+
+	/* Release the lock */
+	return Forest.release (p, path, mode);
 }
 
 void backend::for_each_lock (function<void(const Lock *l, const uint32_t level)> f) const

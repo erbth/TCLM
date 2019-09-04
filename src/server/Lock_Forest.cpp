@@ -83,6 +83,20 @@ int Lock_Forest::create (Process *p, string *path_str)
 	}
 }
 
+int Lock_Forest::release (Process *p, std::string *path_str, uint8_t mode)
+{
+	shared_lock lk(m);
+	auto path = split_path (path_str);
+
+	/* Look if the root exists */
+	auto i_root = roots.find ((*path)[0]);
+	if (i_root == roots.end())
+		return LOCK_RELEASE_NOT_HELD;
+
+	/* Release it. */
+	return i_root->second->release (p, mode, path);
+}
+
 void Lock_Forest::for_each_lock (function<void(const Lock *l, const uint32_t level)> f) const
 {
 	shared_lock lk(m);

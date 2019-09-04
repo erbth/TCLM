@@ -16,6 +16,8 @@
 #define MSG_ID_LIST_LOCKS_RESPONSE				0x0A
 #define MSG_ID_CREATE_LOCK						0x0B
 #define MSG_ID_CREATE_LOCK_UPDATE				0x0C
+#define MSG_ID_RELEASE_LOCK						0x0D
+#define MSG_ID_RELEASE_LOCK_RESPONSE			0x0E
 
 /* server_error codes */
 #define SE_MSG_TOO_LONG							0x0001
@@ -28,8 +30,7 @@
 #define RESPONSE_STATUS_NO_SUCH_PROCESS			0x0003
 #define RESPONSE_STATUS_QUEUED					0x0004
 #define RESPONSE_STATUS_LOCK_EXISTS				0x0005
-#define RESPONSE_STATUS_NO_SUCH_LOCK			0x0006
-#define RESPONSE_STATUS_NOT_LOCKED				0x0007
+#define RESPONSE_STATUS_LOCK_NOT_HELD			0x0006
 
 /* Lock modes in acquire_lock and release_lock messages */
 #define MSG_LOCK_MODE_S							0x00

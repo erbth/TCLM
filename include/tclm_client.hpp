@@ -58,8 +58,18 @@ public:
 	virtual ~Lock () {};
 
 	virtual const std::string get_path () const = 0;
+
+	/* May throw one of the following exceptions (and a stl exception):
+	 *   * no_such_process_exception */
 	virtual bool create (std::shared_ptr<Process> p) = 0;
 	virtual void destroy(std::shared_ptr<Process> p) = 0;
+
+	/* These may throw on of the following exception (and a stl exception):
+	 *   * no_such_process_exception
+	 *   * lock_not_held_exception */
+	virtual void release_S (std::shared_ptr<Process> p) = 0;
+	virtual void release_Splus (std::shared_ptr<Process> p) = 0;
+	virtual void release_X (std::shared_ptr<Process> p) = 0;
 };
 
 }

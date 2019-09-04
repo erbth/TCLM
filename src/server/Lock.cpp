@@ -154,6 +154,12 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 }
 
 int Lock::release (Process *p, uint8_t mode,
+		std::shared_ptr<std::vector<std::string>> path)
+{
+	return release (p, mode, path, 0, path->size() - 1);
+}
+
+int Lock::release (Process *p, uint8_t mode,
 		std::shared_ptr<std::vector<std::string>> path, uint32_t current_level,
 		uint32_t level)
 {
@@ -173,25 +179,28 @@ int Lock::release (Process *p, uint8_t mode,
 						lockers_S.erase (i);
 						return LOCK_RELEASE_SUCCESS;
 					}
+					break;
 				}
 
 			case LOCK_REQUEST_MODE_Splus:
 				if (locker_Splus == p)
 				{
-					lockers_S.erase (p);
+					locker_Splus = nullptr;
 					return LOCK_RELEASE_SUCCESS;
 				}
+				break;
 
 			case LOCK_REQUEST_MODE_X:
 				if (locker_X == p)
 				{
-					lockers_S.erase (p);
+					locker_X = nullptr;
 					return LOCK_RELEASE_SUCCESS;
 				}
+				break;
 		}
 
 		/* For the compiler */
-		return LOCK_RELEASE_SUCCESS;
+		return LOCK_RELEASE_NOT_HELD;
 	}
 	else
 	{

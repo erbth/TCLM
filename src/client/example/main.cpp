@@ -60,5 +60,18 @@ int main (int argc, char** argv)
 	cout << "Press return to continue." << endl;
 	getchar();
 
+	/* Release the lock */
+	try {
+		root1->release_X (p1);
+	} catch (exception &e) {
+		cerr << e.what() << endl;
+		return EXIT_FAILURE;
+	}
+
+	printf ("Unlocked the lock I created above.\n");
+
+	cout << "Press return to continue." << endl;
+	getchar();
+
 	return EXIT_SUCCESS;
 }

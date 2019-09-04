@@ -51,3 +51,9 @@ const char *no_such_process_exception::what () const noexcept
 {
 	return "No such process.";
 }
+
+/* lock_not_held_exception */
+const char *lock_not_held_exception::what () const noexcept
+{
+	return "Lock not held in this mode.";
+}

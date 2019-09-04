@@ -74,6 +74,10 @@ void daemon::receive_message_internal (Connection *c, struct stream *s)
 		case MSG_ID_CREATE_LOCK:
 			receive_message_create_lock (c, s, length);
 			break;
+
+		case MSG_ID_RELEASE_LOCK:
+			receive_message_release_lock (c, s, length);
+			break;
 	}
 
 	stream_free (s);
@@ -297,6 +301,40 @@ void daemon::receive_message_create_lock (Connection *c, struct stream *input, u
 	stream_seek (s, stream_tell(s) + path_length);
 
 	stream_write_uint16_t (s, status_code);
+
+	/* Send the message */
+	c->send (s);
+}
+
+void daemon::receive_message_release_lock (Connection *c, struct stream *input, uint32_t length)
+{
+	uint32_t pid = stream_read_uint32_t (input);
+	uint16_t path_length = stream_read_uint16_t (input);
+	string path ((char*) stream_pointer (input), path_length);
+	stream_seek (input, stream_tell(input) + path_length);
+	uint8_t mode = stream_read_uint8_t (input);
+
+	/* Create new stream for sending something */
+	auto s = stream_new ();
+	if (!s)
+		return;
+
+	if (stream_ensure_remaining_capacity (s, stream_capacity (input) + 2) != 0)
+	{
+		stream_free (s);
+		return;
+	}
+
+	/* Cannot fail because the stream has enough capacity */
+	write_message_header (s, MSG_ID_RELEASE_LOCK_RESPONSE, stream_length (input) + 2 - 5);
+
+	stream_seek (input, 5);
+	memcpy (stream_pointer(s), stream_pointer(input), stream_remaining_length (input));
+	stream_set_length (s, stream_length (input));
+	stream_seek (s, stream_length (input));
+
+	/* Call backend */
+	stream_write_uint16_t (s, b.release_lock (pid, &path, mode));
 
 	/* Send the message */
 	c->send (s);

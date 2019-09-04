@@ -23,8 +23,13 @@ public:
 	int unregister_process (const uint32_t id);
 	void for_each_process (std::function<void(const Process *p)> f) const;
 
-	/* Returns on out of CREATE_LOCK_RESULT_* */
+	/* Returns one out of CREATE_LOCK_RESULT_* */
 	int create_lock (const uint32_t pid, std::string *path);
+
+	/* Returns one out of RELEASE_LOCK_RESULT_* and takes one out of LOCK_REQUEST_MODE_*
+	 * for mode. */
+	int release_lock (const uint32_t pid, std::string *path, uint8_t mode);
+
 	void for_each_lock (std::function<void(const Lock *l, const uint32_t level)> f) const;
 };
 

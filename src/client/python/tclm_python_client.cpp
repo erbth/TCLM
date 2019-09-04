@@ -39,6 +39,9 @@ BOOST_PYTHON_MODULE(tclm_python_client)
 		.def ("get_path", &Lock::get_path)
 		.def ("create", &Lock::create)
 		.def ("destroy", &Lock::destroy)
+		.def ("release_S", &Lock::release_S)
+		.def ("release_Splus", &Lock::release_Splus)
+		.def ("release_X", &Lock::release_X)
 	;
 
 	register_ptr_to_python<std::shared_ptr<tclmc>> ();

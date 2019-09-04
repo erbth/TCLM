@@ -11,6 +11,7 @@ add_library (tclm_client SHARED
 	"register_process_request.cpp"
 	"unregister_process_request.cpp"
 	"create_lock_request.cpp"
+	"release_lock_request.cpp"
 	"../polled_fd.cpp"
 	"../Connection.cpp"
 	"../TCP_Connection.cpp"
