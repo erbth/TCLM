@@ -86,7 +86,7 @@ bool Connection::data_in ()
 								auto cbd = receive_callback_data;
 
 								rlk.unlock();
-								cb (this, s, cbd);
+								cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
 								rlk.lock();
 
 								s = nullptr;
@@ -121,7 +121,7 @@ bool Connection::data_in ()
 						auto cbd = receive_callback_data;
 
 						rlk.unlock();
-						cb (this, s, cbd);
+						cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
 						rlk.lock();
 					}
 					else

@@ -13,8 +13,8 @@ find_package (PythonLibs 3 REQUIRED)
 find_package (Boost REQUIRED COMPONENTS system python3)
 
 # Set CXXFLAGS
-set (CMAKE_CXX_FLAGS "-O2 -std=c++17")
-set (CMAKE_CXX_FLAGS_DEBUG "-gdwarf-2 -DDEBUG")
+set (CMAKE_CXX_FLAGS "-O2 -std=c++17 -Wall")
+set (CMAKE_CXX_FLAGS_DEBUG "-gdwarf-2 -DDEBUG -Werror")
 
 include_directories (src)
 include_directories (include)

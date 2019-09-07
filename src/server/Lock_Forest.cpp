@@ -14,15 +14,15 @@ Lock_Forest::~Lock_Forest ()
 			});
 }
 
-shared_ptr<vector<string>> Lock_Forest::split_path (string *path)
+shared_ptr<vector<string>> Lock_Forest::split_path (const string *path)
 {
 	auto v = make_shared<vector<string>>();
 
-	int cbegin = 0;
+	string::size_type cbegin = 0;
 
 	for (;;)
 	{
-		int cend = path->find ('.', cbegin);
+		string::size_type cend = path->find ('.', cbegin);
 
 		if (cend == string::npos)
 		{
@@ -43,13 +43,13 @@ shared_ptr<vector<string>> Lock_Forest::split_path (string *path)
 	return v;
 }
 
-int Lock_Forest::create (Process *p, string *path_str)
+int Lock_Forest::create (Process *p, const string *path_str)
 {
 	unique_lock lk(m);
 	auto path = split_path (path_str);
 
 	/* Create a lock request */
-	auto req = make_shared<Lock_Request>(
+	auto req = Lock_Request::create(
 			LOCK_REQUEST_MODE_X,
 			p,
 			path,
@@ -70,12 +70,14 @@ int Lock_Forest::create (Process *p, string *path_str)
 	switch (ret)
 	{
 		case LOCK_ACQUIRE_ACQUIRED:
+			p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
 			if (req->lock_created)
 				return LOCK_CREATE_CREATED;
 			else
 				return LOCK_CREATE_EXISTS;
 
 		case LOCK_ACQUIRE_QUEUED:
+			p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
 			return LOCK_CREATE_QUEUED;
 
 		default:
@@ -84,7 +86,7 @@ int Lock_Forest::create (Process *p, string *path_str)
 	}
 }
 
-int Lock_Forest::acquire (Process *p, std::string *path_str, uint8_t mode)
+int Lock_Forest::acquire (Process *p, const std::string *path_str, uint8_t mode)
 {
 	shared_lock lk(m);
 	auto path = split_path (path_str);
@@ -95,10 +97,21 @@ int Lock_Forest::acquire (Process *p, std::string *path_str, uint8_t mode)
 		return LOCK_ACQUIRE_NON_EXISTENT;
 
 	/* Try to acquire it */
-	return i_root->second->acquire (make_shared<Lock_Request>(mode, p, path));
+	auto ret = i_root->second->acquire (Lock_Request::create(mode, p, path));
+
+	switch (ret)
+	{
+		case LOCK_ACQUIRE_ACQUIRED:
+		case LOCK_ACQUIRE_QUEUED:
+			p->add_held_lock(path_str, mode);
+			break;
+	}
+
+	return ret;
 }
 
-int Lock_Forest::release (Process *p, std::string *path_str, uint8_t mode)
+std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock_Forest::release (
+		Process *p, const std::string *path_str, uint8_t mode)
 {
 	shared_lock lk(m);
 	auto path = split_path (path_str);
@@ -106,10 +119,15 @@ int Lock_Forest::release (Process *p, std::string *path_str, uint8_t mode)
 	/* Look if the root exists */
 	auto i_root = roots.find ((*path)[0]);
 	if (i_root == roots.end())
-		return LOCK_RELEASE_NOT_HELD;
+		return pair(LOCK_RELEASE_NOT_HELD, set<shared_ptr<Lock_Request>>());
 
 	/* Release it. */
-	return i_root->second->release (p, mode, path);
+	auto tr = i_root->second->release (p, mode, path);
+	
+	if (tr.first == LOCK_RELEASE_SUCCESS)
+		p->remove_held_lock(path_str, mode);
+
+	return move(tr);
 }
 
 void Lock_Forest::for_each_lock (function<void(const Lock *l, const uint32_t level)> f) const

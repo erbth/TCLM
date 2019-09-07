@@ -2,12 +2,13 @@
 #define __POLLED_FD
 
 /* This file belongs to the communications unit. */
+#include <memory>
 #include <mutex>
 
 /* Prototypes for cyclic include dependencies */
 class Communications_Manager;
 
-class polled_fd
+class polled_fd : public std::enable_shared_from_this<polled_fd>
 {
 protected:
 	std::recursive_mutex m;
@@ -17,9 +18,10 @@ protected:
 	bool out_enabled;
 	Communications_Manager *mgr;
 
-public:
 	/* If close_fd is true, the class closes the fd on destruction. */
 	polled_fd(int fd, bool close_fd = true);
+
+public:
 	virtual ~polled_fd();
 
 	const int get_fd ();

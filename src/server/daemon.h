@@ -18,17 +18,20 @@ class daemon
 {
 protected:
 	/* The backends of callback functions for use by Connections */
-	void receive_message_internal (Connection *c, struct stream *s);
+	void receive_message_internal (std::shared_ptr<Connection> c, struct stream *s);
+
+	void update_pid_connection (uint32_t pid, std::shared_ptr<Connection> c);
+	void notify_answered_requests (std::set<std::shared_ptr<Lock_Request>> requests);
 
 	/* Message handlers */
-	void receive_message_list_connections (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_list_processes (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_list_locks (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_register_process (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_unregister_process (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_create_lock (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_release_lock (Connection *c, struct stream *input, uint32_t length);
-	void receive_message_acquire_lock (Connection *c, struct stream *input, uint32_t length);
+	void receive_message_list_connections (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_list_processes (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_list_locks (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_register_process (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_unregister_process (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_create_lock (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_release_lock (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_acquire_lock (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
 
 public:
 	Communications_Manager cm;
@@ -39,7 +42,7 @@ public:
 	bool run();
 
 	/* Callback functions for use by Connections */
-	static void receive_message (Connection *c, struct stream *s, void *data);
+	static void receive_message (std::shared_ptr<Connection> c, struct stream *s, void *data);
 };
 
 }

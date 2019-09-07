@@ -62,16 +62,23 @@ public:
 	const std::string get_name () const;
 
 	/* Returns on of LOCK_ACQUIRE_*. LOCK_ACQUIRE_NON_EXISTENT will only by
-	 * returned if create_missing is false and the lock does not exist. */
-	int acquire (std::shared_ptr<Lock_Request> r);
+	 * returned if create_missing is false and the lock does not exist.
+	 *
+	 * If insert_in_current_queue is false, the request will only be queued if
+	 * it advanced one level. This is useful when advancing already queued lock
+	 * request on lower levels. */
+	int acquire (std::shared_ptr<Lock_Request> r, bool insert_in_current_queue = true);
 
-	/* Returns one of LOCK_RELEASE_*. It doesn't distinguish between locks that
-	 * are not held and those which do not exist, because non-existent locks are
-	 * obviously not held. */
-	int release (Process *p, uint8_t mode,
+	/* Returns one of LOCK_RELEASE_*, and a set of Lock Requests that were
+	 * answered as result of the release operation. It doesn't distinguish
+	 * between locks that are not held and those which do not exist, because
+	 * non-existent locks are obviously not held. */
+	std::pair<int,std::set<std::shared_ptr<Lock_Request>>> release (
+			Process *p, uint8_t mode,
 			std::shared_ptr<std::vector<std::string>> path);
 
-	int release (Process *p, uint8_t mode,
+	std::pair<int,std::set<std::shared_ptr<Lock_Request>>> release (
+			Process *p, uint8_t mode,
 			std::shared_ptr<std::vector<std::string>> path,
 			uint32_t current_level, uint32_t level);
 

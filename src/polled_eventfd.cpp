@@ -8,6 +8,13 @@ extern "C" {
 
 using namespace std;
 
+class concrete_polled_eventfd : public polled_eventfd {};
+
+shared_ptr<polled_eventfd> polled_eventfd::create ()
+{
+	return make_shared<concrete_polled_eventfd>();
+}
+
 polled_eventfd::polled_eventfd ()
 	: polled_fd (-1, true)
 {
@@ -33,7 +40,7 @@ bool polled_eventfd::data_in ()
 
 	/* Call the specified callback */
 	if (cb)
-		cb (this, val, cb_data);
+		cb (static_pointer_cast<polled_eventfd>(shared_from_this()), val, cb_data);
 
 	return true;
 }

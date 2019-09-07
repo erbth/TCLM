@@ -23,7 +23,7 @@ using namespace std;
 using namespace manager;
 
 /* Handlers for the messages sent by the server */
-void receive_list_conns_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+void receive_list_conns_response (shared_ptr<Connection> c, struct stream *s, argument_parser *ap, uint32_t length)
 {
 	if (ap->action == "list-connections")
 	{
@@ -56,7 +56,7 @@ void receive_list_conns_response (Connection *c, struct stream *s, argument_pars
 	}
 }
 
-void receive_list_processes_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+void receive_list_processes_response (shared_ptr<Connection> c, struct stream *s, argument_parser *ap, uint32_t length)
 {
 	if (ap->action == "list-processes")
 	{
@@ -69,14 +69,14 @@ void receive_list_processes_response (Connection *c, struct stream *s, argument_
 			uint32_t id = stream_read_uint32_t(s);
 			uint32_t lock_count = stream_read_uint32_t(s);
 
-			printf ("%#9" PRIu32 "             %#9" PRIu32 "\n", id, lock_count);
+			printf ("%9" PRIu32 "             %9" PRIu32 "\n", id, lock_count);
 		}
 
 		c->get_mgr()->request_quit();
 	}
 }
 
-void receive_list_locks_response (Connection *c, struct stream *s, argument_parser *ap, uint32_t length)
+void receive_list_locks_response (shared_ptr<Connection> c, struct stream *s, argument_parser *ap, uint32_t length)
 {
 	if (ap->action == "list-locks")
 	{
@@ -109,30 +109,27 @@ void receive_list_locks_response (Connection *c, struct stream *s, argument_pars
 }
 
 /* Receive a message */
-void receive_message (Connection *c, struct stream *s, void *data)
+void receive_message (shared_ptr<Connection> c, struct stream *s, void *data)
 {
 	auto length = stream_length (s);
 	auto ap = (argument_parser*) data;
 
-	if (length >= 5)
+	uint8_t id = stream_read_uint8_t (s);
+	stream_read_uint32_t (s);
+
+	switch (id)
 	{
-		uint8_t id = stream_read_uint8_t (s);
-		uint8_t p_length = stream_read_uint32_t (s);
+		case MSG_ID_LIST_CONNS_RESPONSE:
+			receive_list_conns_response (c, s, ap, length);
+			break;
 
-		switch (id)
-		{
-			case MSG_ID_LIST_CONNS_RESPONSE:
-				receive_list_conns_response (c, s, ap, length);
-				break;
+		case MSG_ID_LIST_PROCS_RESPONSE:
+			receive_list_processes_response (c, s, ap, length);
+			break;
 
-			case MSG_ID_LIST_PROCS_RESPONSE:
-				receive_list_processes_response (c, s, ap, length);
-				break;
-
-			case MSG_ID_LIST_LOCKS_RESPONSE:
-				receive_list_locks_response (c, s, ap, length);
-				break;
-		}
+		case MSG_ID_LIST_LOCKS_RESPONSE:
+			receive_list_locks_response (c, s, ap, length);
+			break;
 	}
 
 	stream_free (s);
@@ -226,7 +223,7 @@ int main (int argc, char** argv)
 						{
 							if (ai->ai_family == AF_INET)
 							{
-								c = make_shared<TCP_Connection> (fd, (const sockaddr_in*) addr);
+								c = TCP_Connection::create (fd, (const sockaddr_in*) addr);
 								break;
 							}
 							else

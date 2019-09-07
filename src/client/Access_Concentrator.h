@@ -78,8 +78,8 @@ protected:
 	 * Returns true if the message was sent. */
 	bool send_message_auto (struct stream *s);
 
-	static void receive_message_tcp (Connection *c, struct stream *s, void *data);
-	void receive_message_tcp_internal (Connection *c, struct stream *s);
+	static void receive_message_tcp (std::shared_ptr<Connection> c, struct stream *s, void *data);
+	void receive_message_tcp_internal (std::shared_ptr<Connection> c, struct stream *s);
 
 
 	/* Helper constructs like nonces for specific request types with their
@@ -117,11 +117,11 @@ protected:
 	void send_release_lock_request (release_lock_request *r);
 
 	/* Functions for receiving messages */
-	void receive_register_process_response (Connection *c, struct stream *s, uint32_t length);
-	void receive_unregister_process_response (Connection *c, struct stream *s, uint32_t length);
-	void receive_create_lock_update (Connection *c, struct stream *s, uint32_t length);
-	void receive_acquire_lock_update (Connection *c, struct stream *s, uint32_t length);
-	void receive_release_lock_response (Connection *c, struct stream *s, uint32_t length);
+	void receive_register_process_response (std::shared_ptr<Connection> c, struct stream *s, uint32_t length);
+	void receive_unregister_process_response (std::shared_ptr<Connection> c, struct stream *s, uint32_t length);
+	void receive_create_lock_update (std::shared_ptr<Connection> c, struct stream *s, uint32_t length);
+	void receive_acquire_lock_update (std::shared_ptr<Connection> c, struct stream *s, uint32_t length);
+	void receive_release_lock_response (std::shared_ptr<Connection> c, struct stream *s, uint32_t length);
 
 public:
 	Access_Concentrator (const std::string &servername,

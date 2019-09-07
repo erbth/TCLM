@@ -19,6 +19,13 @@ extern "C" {
 using namespace std;
 using namespace server;
 
+class concrete_TCP_Listener : public TCP_Listener {};
+
+shared_ptr<TCP_Listener> TCP_Listener::create ()
+{
+	return make_shared<concrete_TCP_Listener>();
+}
+
 TCP_Listener::TCP_Listener () :
 	polled_fd (-1, close_fd=true)
 {
@@ -76,7 +83,7 @@ bool TCP_Listener::data_in ()
 		return true;
 
 	try {
-		auto c = make_shared<TCP_Connection> (endpoint_fd, &endpoint_addr);
+		auto c = TCP_Connection::create (endpoint_fd, &endpoint_addr);
 		c->set_receive_callback (daemon::receive_message, (void*) d);
 		mgr->add_polled_fd (c);
 	} catch (exception &e) {

@@ -17,7 +17,7 @@ extern "C" {
 class Connection : public polled_fd
 {
 public:
-	typedef void (*receive_callback_t) (Connection *c, struct stream *s, void *data);
+	typedef void (*receive_callback_t) (std::shared_ptr<Connection> c, struct stream *s, void *data);
 
 protected:
 	/* Sending data */
@@ -37,10 +37,9 @@ protected:
 	receive_callback_t receive_callback = nullptr;
 	void *receive_callback_data = nullptr;
 
-public:
-	/* Connections swallow the given fd. */
 	Connection (int fd);
 
+public:
 	/* There is a destructor; this is just to make the class pure virtual. */
 	virtual ~Connection () = 0;
 

@@ -19,9 +19,12 @@ class TCP_Listener : public polled_fd
 protected:
 	daemon *d;
 
-public:
 	/* This may throw an errno_exception. */
 	TCP_Listener ();
+
+public:
+	/* This may throw an errno_exception. */
+	static std::shared_ptr<TCP_Listener> create ();
 	~TCP_Listener () override;
 
 	void set_daemon (daemon *d);

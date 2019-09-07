@@ -9,7 +9,7 @@ using namespace std;
 using namespace tclm_client;
 
 Lock_impl::Lock_impl (shared_ptr<tclmc_impl> tclmc, const string path) :
-	tclmc(tclmc), path(path)
+	path(path), tclmc(tclmc)
 {}
 
 const string Lock_impl::get_path () const

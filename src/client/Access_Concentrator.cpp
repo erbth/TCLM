@@ -19,7 +19,7 @@ using namespace std;
 using namespace tclm_client;
 
 Access_Concentrator::Access_Concentrator (
-		const std::string &servername,
+		const string &servername,
 		const uint16_t tcp_port,
 		const uint16_t udp_port) :
 	servername(servername), tcp_port(tcp_port), udp_port(udp_port)
@@ -80,7 +80,7 @@ bool Access_Concentrator::create_tcp_connection() noexcept
 						if (ai->ai_family == AF_INET)
 						{
 							try {
-								tcp_connection = make_shared<TCP_Connection>(fd, (const sockaddr_in*) addr);
+								tcp_connection = TCP_Connection::create(fd, (const sockaddr_in*) addr);
 								break;
 							} catch (...) {
 								close (fd);
@@ -121,7 +121,7 @@ bool Access_Concentrator::send_message_tcp (struct stream *s)
 	{
 		try {
 			tcp_connection->send(s);
-		} catch(bad_alloc) {
+		} catch(bad_alloc&) {
 			return false;
 		} catch(...) {
 			stream_free (s);
@@ -144,13 +144,13 @@ bool Access_Concentrator::send_message_auto (struct stream *s)
 	return ret;
 }
 
-void Access_Concentrator::receive_message_tcp (Connection *c, struct stream *s, void *data)
+void Access_Concentrator::receive_message_tcp (shared_ptr<Connection> c, struct stream *s, void *data)
 {
 	auto pThis = (Access_Concentrator*) data;
 	pThis->receive_message_tcp_internal (c, s);
 }
 
-void Access_Concentrator::receive_message_tcp_internal (Connection *c, struct stream *s)
+void Access_Concentrator::receive_message_tcp_internal (shared_ptr<Connection> c, struct stream *s)
 {
 	uint8_t id = stream_read_uint8_t (s);
 	uint32_t length = stream_read_uint32_t (s);
@@ -390,7 +390,7 @@ void Access_Concentrator::send_release_lock_request (release_lock_request *r)
 
 
 /* Receive messages */
-void Access_Concentrator::receive_register_process_response (Connection *c, struct stream *s, uint32_t length)
+void Access_Concentrator::receive_register_process_response (shared_ptr<Connection> c, struct stream *s, uint32_t length)
 {
 	uint32_t nonce = stream_read_uint32_t (s);
 	uint16_t status_code = stream_read_uint16_t (s);
@@ -418,7 +418,7 @@ void Access_Concentrator::receive_register_process_response (Connection *c, stru
 	}
 }
 
-void Access_Concentrator::receive_unregister_process_response (Connection *c, struct stream *s, uint32_t length)
+void Access_Concentrator::receive_unregister_process_response (shared_ptr<Connection> c, struct stream *s, uint32_t length)
 {
 	uint32_t id = stream_read_uint32_t(s);
 	uint16_t status_code = stream_read_uint16_t(s);
@@ -442,7 +442,7 @@ void Access_Concentrator::receive_unregister_process_response (Connection *c, st
 	}
 }
 
-void Access_Concentrator::receive_create_lock_update (Connection *c, struct stream *s, uint32_t length)
+void Access_Concentrator::receive_create_lock_update (shared_ptr<Connection> c, struct stream *s, uint32_t length)
 {
 	uint32_t pid = stream_read_uint32_t(s);
 	uint16_t path_length = stream_read_uint16_t(s);
@@ -470,7 +470,7 @@ void Access_Concentrator::receive_create_lock_update (Connection *c, struct stre
 	}
 }
 
-void Access_Concentrator::receive_acquire_lock_update (Connection *c, struct stream *s, uint32_t length)
+void Access_Concentrator::receive_acquire_lock_update (shared_ptr<Connection> c, struct stream *s, uint32_t length)
 {
 	uint32_t pid = stream_read_uint32_t (s);
 	uint16_t path_length = stream_read_uint16_t (s);
@@ -499,7 +499,7 @@ void Access_Concentrator::receive_acquire_lock_update (Connection *c, struct str
 	}
 }
 
-void Access_Concentrator::receive_release_lock_response (Connection *c, struct stream *s, uint32_t length)
+void Access_Concentrator::receive_release_lock_response (shared_ptr<Connection> c, struct stream *s, uint32_t length)
 {
 	uint32_t pid = stream_read_uint32_t (s);
 	uint16_t path_length = stream_read_uint16_t (s);

@@ -21,7 +21,7 @@ protected:
 	/* This polled eventfd can wakeup the main loop's epoll_wait. */
 	std::shared_ptr<polled_eventfd> pefd;
 
-	static void pefd_read_callback (polled_eventfd *pefd, uint64_t val, void *data);
+	static void pefd_read_callback (std::shared_ptr<polled_eventfd> pefd, uint64_t val, void *data);
 
 	std::recursive_mutex m_polled_fds;
 	std::map<polled_fd*, std::shared_ptr<polled_fd>> polled_fds;

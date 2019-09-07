@@ -5,14 +5,16 @@
 
 class polled_eventfd : public polled_fd
 {
-	typedef void (*read_callback_t) (polled_eventfd *pefd, uint64_t val, void *data);
+	typedef void (*read_callback_t) (std::shared_ptr<polled_eventfd> pefd, uint64_t val, void *data);
 
 protected:
 	read_callback_t read_callback = nullptr;
 	void *read_callback_data;
 
-public:
 	polled_eventfd ();
+
+public:
+	static std::shared_ptr<polled_eventfd> create ();
 
 	bool data_in () override;
 	bool data_out () override;

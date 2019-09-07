@@ -28,7 +28,7 @@ void Communications_Manager::for_each_pfd (std::function<void(const polled_fd*)>
 		f (i->first);
 }
 
-void Communications_Manager::pefd_read_callback (polled_eventfd *pefd, uint64_t val, void *data)
+void Communications_Manager::pefd_read_callback (shared_ptr<polled_eventfd> pefd, uint64_t val, void *data)
 {
 	/* Reset the eventfd */
 	pefd->write (0);
@@ -78,7 +78,7 @@ bool Communications_Manager::main_loop ()
 	/* If it does not exist yet, create a polled eventfd. */
 	if (!pefd)
 	{
-		pefd = make_shared<polled_eventfd>();
+		pefd = polled_eventfd::create();
 		pefd->set_read_callback (pefd_read_callback, this);
 		add_polled_fd (pefd);
 	}

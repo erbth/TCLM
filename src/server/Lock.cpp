@@ -5,12 +5,12 @@ using namespace std;
 using namespace server;
 
 Lock::Lock (Lock *parent, const string name) :
-	parent(parent), name(name)
+	name(name), parent(parent)
 {
 }
 
 Lock::Lock (const string name) :
-	parent(nullptr), name(name)
+	name(name), parent(nullptr)
 {
 }
 
@@ -27,7 +27,7 @@ const string Lock::get_name () const
 	return name;
 }
 
-int Lock::acquire (shared_ptr<Lock_Request> r)
+int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 {
 	unique_lock lk(m);
 
@@ -41,6 +41,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 				if (locker_X == nullptr && lockers_IX.size() == 0)
 				{
 					lockers_S.insert (r->requester);
+					r->acquire_status = LOCK_ACQUIRE_ACQUIRED;
 					return LOCK_ACQUIRE_ACQUIRED;
 				}
 				break;
@@ -51,6 +52,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 						(locker_X == nullptr || locker_X == r->requester))
 				{
 					locker_Splus = r->requester;
+					r->acquire_status = LOCK_ACQUIRE_ACQUIRED;
 					return LOCK_ACQUIRE_ACQUIRED;
 				}
 				break;
@@ -64,12 +66,16 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 								 [r](const Process* p){return r->requester == p;})))
 				{
 					locker_X = r->requester;
+					r->acquire_status = LOCK_ACQUIRE_ACQUIRED;
 					return LOCK_ACQUIRE_ACQUIRED;
 				}
 				break;
 		}
 
-		lock_requests.push_back  (r);
+		if (insert_in_current_queue)
+			lock_requests.push_back  (r);
+
+		r->acquire_status = LOCK_ACQUIRE_QUEUED;
 		return LOCK_ACQUIRE_QUEUED;
 	}
 	else
@@ -86,6 +92,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 				else
 				{
 					lock_requests.push_back (r);
+					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
 				break;
@@ -100,6 +107,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 				else
 				{
 					lock_requests.push_back (r);
+					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
 				break;
@@ -114,6 +122,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 				else
 				{
 					lock_requests.push_back (r);
+					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
 				break;
@@ -130,7 +139,7 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 				 * hence the child cannot be deleted. */
 				r->current_level++;
 				lk.unlock ();
-				return c->acquire (r);
+				return c->acquire (r, true);
 			}
 		}
 
@@ -142,28 +151,34 @@ int Lock::acquire (shared_ptr<Lock_Request> r)
 			r->lock_created = true;
 			r->current_level++;
 			lk.unlock();
-			return c->acquire(r);
+			return c->acquire(r, true);
 		}
 		else
 		{
 			lk.unlock();
 			release (r->requester, r->mode, r->path, 0, r->level);
+			r->acquire_status = LOCK_ACQUIRE_NON_EXISTENT;
 			return LOCK_ACQUIRE_NON_EXISTENT;
 		}
 	}
 }
 
-int Lock::release (Process *p, uint8_t mode,
+std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
+		Process *p, uint8_t mode,
 		std::shared_ptr<std::vector<std::string>> path)
 {
 	return release (p, mode, path, 0, path->size() - 1);
 }
 
-int Lock::release (Process *p, uint8_t mode,
+std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
+		Process *p, uint8_t mode,
 		std::shared_ptr<std::vector<std::string>> path, uint32_t current_level,
 		uint32_t level)
 {
+	set<shared_ptr<Lock_Request>> answered_requests;
 	unique_lock lk(m);
+
+	bool released = false;
 
 	/* Release bottom up */
 	if (current_level == level)
@@ -177,7 +192,7 @@ int Lock::release (Process *p, uint8_t mode,
 					if (i != lockers_S.end())
 					{
 						lockers_S.erase (i);
-						return LOCK_RELEASE_SUCCESS;
+						released = true;
 					}
 					break;
 				}
@@ -186,7 +201,7 @@ int Lock::release (Process *p, uint8_t mode,
 				if (locker_Splus == p)
 				{
 					locker_Splus = nullptr;
-					return LOCK_RELEASE_SUCCESS;
+					released = true;
 				}
 				break;
 
@@ -194,13 +209,10 @@ int Lock::release (Process *p, uint8_t mode,
 				if (locker_X == p)
 				{
 					locker_X = nullptr;
-					return LOCK_RELEASE_SUCCESS;
+					released = true;
 				}
 				break;
 		}
-
-		/* For the compiler */
-		return LOCK_RELEASE_NOT_HELD;
 	}
 	else
 	{
@@ -212,15 +224,14 @@ int Lock::release (Process *p, uint8_t mode,
 			if (c->name == (*path)[current_level + 1])
 			{
 				lk.unlock();
-				c->release (p, mode, path, current_level + 1, level);
+				answered_requests.merge(
+						c->release (p, mode, path, current_level + 1, level).second);
 				lk.lock();
 				break;
 			}
 		}
 
 		/* Release this lock if held */
-		bool released = false;
-
 		switch (mode)
 		{
 			case LOCK_REQUEST_MODE_S:
@@ -259,32 +270,40 @@ int Lock::release (Process *p, uint8_t mode,
 				}
 				break;
 		}
+	}
 
-		/* Potentially remove a lock request if it wasn't held */
-		if (!released)
+	/* Potentially remove a lock request if it wasn't held */
+	if (!released)
+	{
+		bool removed = false;
+
+		remove_if (lock_requests.begin(), lock_requests.end(),
+				[p, mode, &removed](shared_ptr<Lock_Request> cr){
+					auto pred = mode == cr->mode && p == cr->requester;
+					removed |= pred;
+					return pred;
+				});
+
+		return pair(
+				(removed ? LOCK_RELEASE_SUCCESS : LOCK_RELEASE_NOT_HELD),
+				answered_requests);
+	}
+	else
+	{
+		/* Look if another lock request can be granted now */
+		for (;;)
 		{
-			bool removed = false;
-
-			remove_if (lock_requests.begin(), lock_requests.end(),
-					[p, mode, &removed](shared_ptr<Lock_Request> cr){
-						auto pred = mode == cr->mode && p == cr->requester;
-						removed |= pred;
-						return pred;
-					});
-
-			return removed ? LOCK_RELEASE_SUCCESS : LOCK_RELEASE_NOT_HELD;
-		}
-		else
-		{
-			/* Look if another lock request can be granted now */
-			bool granted = true;
-			while (granted)
+			if (lock_requests.size() > 0 &&
+					acquire (lock_requests.front(), false) != LOCK_ACQUIRE_QUEUED)
 			{
-				granted = false;
+				answered_requests.insert (lock_requests.front());
+				lock_requests.pop_front();
 			}
-
-			return LOCK_RELEASE_SUCCESS;
+			else
+				break;
 		}
+
+		return pair(LOCK_RELEASE_SUCCESS,answered_requests);
 	}
 }
 
