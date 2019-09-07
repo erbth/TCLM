@@ -23,3 +23,5 @@ add_executable (tclmd
 	"Lock_Forest.cpp")
 
 target_link_libraries (tclmd Threads::Threads)
+
+install (TARGETS tclmd DESTINATION sbin)

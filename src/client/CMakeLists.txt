@@ -24,5 +24,7 @@ add_library (tclm_client SHARED
 
 target_link_libraries (tclm_client Threads::Threads)
 
+install (TARGETS tclm_client DESTINATION lib)
+
 add_subdirectory (python)
 add_subdirectory (example)

@@ -14,3 +14,5 @@ add_executable (tclm
 	"../polled_eventfd.cpp")
 
 target_link_libraries (tclm Threads::Threads)
+
+install (TARGETS tclm DESTINATION bin)
