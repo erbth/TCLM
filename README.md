@@ -53,12 +53,32 @@ acquired the shared lock? - Usually not, because the code that acquried the lock
 won't know.
 
 To avoid this dilemma, TCLM does not implement recursive locks, in fact
-recursive shared locks may not be uniquely defined at all. Furthermore it
-implements an operation to check if a lock is held by a thread to implement a
-recursive lock by the client code (and not the client library) using the above
-technique.
+recursive shared locks may not be uniquely defined at all. Furthermore processes
+in the sense of TCLM are objects and implemented as such by the client library.
+By wrapping them in other objects one can gain something like process local
+storage and therefore implement a recursive lock in the client code (and not the
+client library) using the above technique.
 
 Additionally such a spinlock would not require server communication anyway and
 hence be implemented in the client library (with the drawback of processes being
 bound to on client library instance, however usually that is the case since a
 process may stand for a local process or even thread).
+
+## Things that may come one day
+I think the current version of TCLM implements the most essential functionality.
+Furthermore the additional features have in mind at the moment will probably not
+add \`power' in a theoretical sense (what can be done with TCLM compared to i.e.
+computational power). However this is a list of some thoughts I have, which I
+(or someone else) may implement one day. But we'll see. (At least as long we're
+not killed by an asteroid or something haha.)
+
+  * UDP transport for small messages
+  * Destroying locks
+  * A query operation to check if a Process acquired a Lock (would ease the
+    client-side implementation of recursive locks but is problematic as one
+    Process could i.e. try to acquire multiple X locks and it is not clear which
+    one is granted)
+
+## Regarding licensing
+I didn't assign a license yet because I couldn't decide uppon one yet. However
+the code is publicly available and no one can stop you from using it ...
