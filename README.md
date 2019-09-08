@@ -79,6 +79,15 @@ not killed by an asteroid or something haha.)
     Process could i.e. try to acquire multiple X locks and it is not clear which
     one is granted)
 
+## A quick overview on programs
+  * tclmd: The server daemon
+  * tclm: A manager to query and manage the server daemon
+  * libtclm\_client: The C++ client library to interface with the server daemon.
+    Features an Access Concentrator, which runs in its own thread, to interface
+    with the server.
+  * tclm\_python\_client: A Python3 wrapper around libtclm\_client. Provides
+    Python3 bindings to TCLM.
+
 ## Regarding licensing
 I didn't assign a license yet because I couldn't decide uppon one yet. However
 the code is publicly available and no one can stop you from using it ...

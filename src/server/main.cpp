@@ -17,6 +17,8 @@ shared_ptr<daemon> d;
 void signal_handler (int signum)
 {
 	printf ("Exiting gracefully due to %s.\n", signum == SIGINT ? "SIGINT" : "SIGTERM");
+	fflush (stdout);
+
 	if (d)
 		d->cm.request_quit();
 	else
@@ -25,7 +27,8 @@ void signal_handler (int signum)
 
 int main (int argc, char** argv)
 {
-	printf ("TCLM Server version %d.%d\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR);
+	printf ("TCLM Server version %d.%d.%d\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR, SERVER_VERSION_PATCH);
+	fflush (stdout);
 
 	/* Create a daemon */
 	d = make_shared<daemon>();

@@ -1,0 +1,60 @@
+Source: tclm
+Section: misc
+Priority: optional
+Maintainer: Thomas Erbesdobler <t.erbesdobler@gmx.de>
+Build-Depends:
+ debhelper (>= 11),
+ dh-systemd,
+ libboost-python-dev,
+ cmake (>= 3.1)
+Standards-Version: 4.1.3
+#Vcs-Browser: https://salsa.debian.org/debian/tclm
+Vcs-Git: https://github.com/erbth/tclm.git
+
+Package: tclmd
+Architecture: any
+Recommends: tclm-manager
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: The TSClient LEGACY Centralized Lock Manager
+ TCLM is a centralized hierarchical (or multi granularity) lock manager
+ supporing S/S+/X locks.
+ This package contains the daemon.
+
+Package: tclm-manager
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: The TSClient LEGACY Centralized Lock Manager
+ TCLM is a centralized hierarchical (or multi granularity) lock manager
+ supporing S/S+/X locks.
+ This package contains the manager, a client program to query and manager the
+ daemon.
+
+Package: libtclm-client1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: The TSClient LEGACY Centralized Lock Manager
+ TCLM is a centralized hierarchical (or multi granularity) lock manager
+ supporing S/S+/X locks.
+ This package contains the C++ client library.
+
+Package: libtclm-client-dev
+Architecture: any
+Depends:
+ libtclm-client1 (= ${binary:Version}),
+ ${misc:Depends}
+Description: The TSClient LEGACY Centralized Lock Manager
+ TCLM is a centralized hierarchical (or multi granularity) lock manager
+ supporing S/S+/X locks.
+ This package contains the C++ client library.
+
+Package: tclm-python-client
+Architecture: any
+Depends:
+ libtclm-client1 (= ${binary:Version}),
+ python3,
+ ${shlibs:Depends},
+ ${misc:Depends}
+Description: The TSClient LEGACY Centralized Lock Manager
+ TCLM is a centralized hierarchical (or multi granularity) lock manager
+ supporing S/S+/X locks.
+ This package contains the python client.

@@ -4,3 +4,14 @@ mysession.vim
 
 # Binary directory
 /build
+
+# Debian packaging files
+/obj-*
+/debian/*
+!/debian/changelog
+!/debian/compat
+!/debian/control
+!/debian/copyright
+!/debian/*.install
+!/debian/rules
+!/debian/source

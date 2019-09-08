@@ -24,7 +24,10 @@ add_library (tclm_client SHARED
 
 target_link_libraries (tclm_client Threads::Threads)
 
-install (TARGETS tclm_client DESTINATION lib)
+set_target_properties (tclm_client PROPERTIES VERSION "${CLIENT_VERSION_MAJOR}.${CLIENT_VERSION_MINOR}.${CLIENT_VERSION_PATCH}" SOVERSION "${CLIENT_VERSION_MAJOR}")
+set_target_properties (tclm_client PROPERTIES PUBLIC_HEADER "../../include/tclm_client_exceptions.hpp;../../include/tclm_client.hpp")
+
+install (TARGETS tclm_client LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include)
 
 add_subdirectory (python)
 add_subdirectory (example)

@@ -154,7 +154,7 @@ void print_help_message ()
 
 int main (int argc, char** argv)
 {
-	printf ("TCLM Manager for tclmd version %d.%d\n\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR);
+	printf ("TCLM Manager for tclmd version %d.%d.%d\n\n", SERVER_VERSION_MAJOR, SERVER_VERSION_MINOR, SERVER_VERSION_PATCH);
 
 	argument_parser ap;
 	if (!ap.parse (argc, argv))

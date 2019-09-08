@@ -25,3 +25,4 @@ add_executable (tclmd
 target_link_libraries (tclmd Threads::Threads)
 
 install (TARGETS tclmd DESTINATION sbin)
+install (FILES "../../tclmd.service" DESTINATION "/lib/systemd/system")
