@@ -51,6 +51,8 @@ public:
 	std::weak_ptr<TCP_Connection> get_tcp_conn() const;
 	void update_tcp_conn (std::weak_ptr<TCP_Connection> conn);
 
+	/* The list of held locks is different from the list of lock requests. None
+	 * of the logic shared common code / situations. */
 	void add_held_lock (const std::string *path, uint8_t mode);
 	void remove_held_lock (const std::string *path, uint8_t mode);
 	const uint32_t get_lock_count() const;

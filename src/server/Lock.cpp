@@ -286,52 +286,45 @@ std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
 
 			if (c->name == (*path)[current_level + 1])
 			{
-				lk.unlock();
-				answered_requests.merge(
-						c->release (p, mode, path, current_level + 1, level).second);
-				lk.lock();
+				auto tr = c->release (p, mode, path, current_level + 1, level);
+				answered_requests.merge(tr.second);
+
+				if (tr.first == LOCK_RELEASE_SUCCESS)
+					released = true;
+
 				break;
 			}
 		}
 
-		/* Release this lock if held */
-		switch (mode)
+		/* Release this lock if the child was held. */
+		if (released)
 		{
-			case LOCK_REQUEST_MODE_S:
-				/* IS */
-				{
-					auto i = lockers_IS.find(p);
-					if (i != lockers_IS.end())
+			switch (mode)
+			{
+				case LOCK_REQUEST_MODE_S:
+					/* IS */
 					{
+						auto i = lockers_IS.find(p);
 						lockers_IS.erase(i);
-						released = true;
 					}
-				}
-				break;
+					break;
 
-			case LOCK_REQUEST_MODE_Splus:
-				/* IS+ */
-				{
-					auto i = lockers_ISplus.find(p);
-					if (i != lockers_ISplus.end())
+				case LOCK_REQUEST_MODE_Splus:
+					/* IS+ */
 					{
+						auto i = lockers_ISplus.find(p);
 						lockers_ISplus.erase(i);
-						released = true;
 					}
-				}
-				break;
+					break;
 
-			case LOCK_REQUEST_MODE_X:
-				/* X */
-				{
-					auto i = lockers_IX.find(p);
-					if (i != lockers_IX.end())
+				case LOCK_REQUEST_MODE_X:
+					/* IX */
 					{
+						auto i = lockers_IX.find(p);
 						lockers_IX.erase(i);
-						released = true;
 					}
-				}
-				break;
+					break;
+			}
 		}
 	}
 
