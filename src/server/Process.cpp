@@ -22,17 +22,23 @@ Process::~Process ()
 
 	while (lock_requests.size() > 0)
 	{
-		auto w = lock_requests.begin()->second;
+		auto i_w = lock_requests.begin();
+		auto w = i_w->second;
 		lk.unlock();
 
 		/* Lock requests may try to remove themselves from the list at any point. */
 		auto r = w.lock();
 		if (r)
 		{
-			/* If we come here, the Lock Requests does still exist, the
+			/* If we come here, the Lock Request does still exist, the
 			 * destructor was not invoked yet and it won't try to remove itself
 			 * from our list anymore as we tell it so. */
 			r->set_requester_destroyed ();
+			lk.lock();
+
+			/* In return, we're to remove it from our list. It thinks this process was
+			 * destroyed already - in fact it'll be in a second only. */
+			lock_requests.erase(i_w);
 		}
 		else
 		{
@@ -40,9 +46,8 @@ Process::~Process ()
 			 * removed itself from our list already or will do so in a moment.
 			 * To ease that free the cpu. */
 			std::this_thread::yield();
+			lk.lock();
 		}
-
-		lk.lock();
 	}
 
 	/* Every other destruction operation must be done below, as a Lock Request

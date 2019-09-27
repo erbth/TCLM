@@ -17,9 +17,9 @@ const string Lock_impl::get_path () const
 	return path;
 }
 
-bool Lock_impl::create (std::shared_ptr<Process> p)
+bool Lock_impl::create (std::shared_ptr<Process> p, const bool acquire_X)
 {
-	auto r = make_unique<create_lock_request> (p->get_id(), &path);
+	auto r = make_unique<create_lock_request> (p->get_id(), &path, acquire_X);
 	auto status_code = r->issue (&(tclmc->ac));
 
 	switch (status_code)
@@ -29,6 +29,9 @@ bool Lock_impl::create (std::shared_ptr<Process> p)
 
 		case RESPONSE_STATUS_LOCK_EXISTS:
 			return false;
+
+		case RESPONSE_STATUS_PARENT_NOT_HELD:
+			throw parent_not_held_exception ();
 
 		case RESPONSE_STATUS_NO_SUCH_PROCESS:
 		default:

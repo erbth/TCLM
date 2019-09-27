@@ -28,7 +28,7 @@ pair<Process *, shared_lock<shared_mutex>> backend::find_process (const uint32_t
 	return move(Processes.find(id));
 }
 
-int backend::create_lock (const uint32_t pid, string *path)
+int backend::create_lock (const uint32_t pid, string *path, const bool acquire_X)
 {
 	/* Find the process object. */
 	auto t = Processes.find (pid);
@@ -38,7 +38,7 @@ int backend::create_lock (const uint32_t pid, string *path)
 		return CREATE_LOCK_RESULT_NO_SUCH_PROCESS;
 
 	/* Create the Lock */
-	auto ret = Forest.create (p, path);
+	auto ret = Forest.create (p, path, acquire_X);
 
 	switch (ret)
 	{
@@ -50,6 +50,9 @@ int backend::create_lock (const uint32_t pid, string *path)
 
 		case LOCK_CREATE_EXISTS:
 			return CREATE_LOCK_RESULT_EXISTS;
+
+		case LOCK_CREATE_PARENT_NOT_HELD:
+			return CREATE_LOCK_RESULT_PARENT_NOT_HELD;
 
 		default:
 			/* Cannot happen */

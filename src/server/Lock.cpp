@@ -27,6 +27,69 @@ const string Lock::get_name () const
 	return name;
 }
 
+int Lock::create_not_held (Process *p, shared_ptr<vector<string>> path)
+{
+	if ((*path)[0] != name || !p)
+		return LOCK_CREATE_PARENT_NOT_HELD;
+
+	bool ensured = p == locker_X;
+
+	/* If someone tried to create only the root node without meaning to own it
+	 * immediately, path->size() will be one. If we further end up here, the
+	 * root node must exist already. Otherwise the creation would have failed
+	 * earlier. */
+	if (path->size() <= 1)
+		return ensured ? LOCK_CREATE_EXISTS : LOCK_CREATE_PARENT_NOT_HELD;
+
+	return create_not_held (p, path, 1, path->size() - 1, ensured);
+}
+
+int Lock::create_not_held (Process *p, shared_ptr<vector<string>> path,
+		uint32_t current_level, uint32_t level, bool ownership_ensured)
+{
+	unique_lock lk(m);
+
+	/* Eventually ensure the ownership on the fly */
+	ownership_ensured |= p == locker_X;
+
+	/* See if the requested child exists */
+	Lock *child = nullptr;
+
+	for (auto i = children.begin(); i != children.end(); i++)
+	{
+		Lock *c = *i;
+
+		if (c->get_name() == (*path)[current_level])
+		{
+			child = c;
+			break;
+		}
+	}
+
+	/* If not, create it. */
+	bool created = false;
+
+	if (!child)
+	{
+		if (!ownership_ensured)
+			return LOCK_CREATE_PARENT_NOT_HELD;
+
+		child = new Lock (this, (*path)[current_level]);
+		children.push_back (child);
+
+		created = true;
+	}
+
+	/* If the target lock is supposed to be further down the tree, go ahead. */
+	if (current_level < level)
+		return child->create_not_held (p, path, current_level + 1, level,
+				ownership_ensured);
+	else
+		return ownership_ensured ?
+			(created ? LOCK_CREATE_CREATED : LOCK_CREATE_EXISTS) :
+			LOCK_CREATE_PARENT_NOT_HELD;
+}
+
 int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 {
 	unique_lock lk(m);

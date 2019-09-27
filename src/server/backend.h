@@ -38,8 +38,10 @@ public:
 	 * long as the lock is kept. */
 	std::pair<Process *, std::shared_lock<std::shared_mutex>> find_process (const uint32_t id);
 
-	/* Returns one out of CREATE_LOCK_RESULT_* */
-	int create_lock (const uint32_t pid, std::string *path);
+	/* Returns one out of CREATE_LOCK_RESULT_*. If acquire_X is true, the new
+	 * lock will be acquired in X mode upon creation. Otherwise the parent lock
+	 * must be held in X mode by the requesting Process. */
+	int create_lock (const uint32_t pid, std::string *path, const bool acquire_X);
 
 	/* Returns one out of ACQUIRE_LOCK_RESULT_* and taked one out of LOCK_REQUEST_MODE_*
 	 * for mode */

@@ -317,19 +317,22 @@ void Access_Concentrator::send_create_lock_request (create_lock_request *r)
 	if (!s)
 		return;
 
-	if (stream_ensure_remaining_capacity (s, 5 + 4 + 2 + r->get_path()->size()) != 0)
+	if (stream_ensure_remaining_capacity (s, 5 + 4 + 2 + r->get_path()->size() + 1) != 0)
 	{
 		stream_free (s);
 		return;
 	}
 
 	/* Cannot fail because the stream has enough capacity. */
-	write_message_header (s, MSG_ID_CREATE_LOCK, 4 + 2 + r->get_path()->size());
+	write_message_header (s, MSG_ID_CREATE_LOCK, 4 + 2 + r->get_path()->size() + 1);
 	stream_write_uint32_t (s, r->get_pid());
 	stream_write_uint16_t (s, r->get_path()->size());
 
 	memcpy (stream_pointer(s), r->get_path()->c_str(), r->get_path()->size());
-	stream_set_length (s, stream_tell(s) + r->get_path()->size());
+	stream_seek (s, stream_tell(s) + r->get_path()->size());
+	stream_set_length (s, stream_tell(s));
+
+	stream_write_uint8_t (s, r->get_acquire_X() ? 1 : 0);
 
 	send_message_auto (s);
 }

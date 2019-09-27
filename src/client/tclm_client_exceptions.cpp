@@ -63,3 +63,9 @@ const char *no_such_lock_exception::what () const noexcept
 {
 	return "No such lock.";
 }
+
+/* parent_not_held_exception */
+const char *parent_not_held_exception::what () const noexcept
+{
+	return "None of the parent locks are held.";
+}

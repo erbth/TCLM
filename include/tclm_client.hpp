@@ -61,7 +61,7 @@ public:
 
 	/* May throw one of the following exceptions (and a stl exception):
 	 *   * no_such_process_exception */
-	virtual bool create (std::shared_ptr<Process> p) = 0;
+	virtual bool create (std::shared_ptr<Process> p, const bool acquire_X) = 0;
 	virtual void destroy(std::shared_ptr<Process> p) = 0;
 
 	/* These may throw one of the following exceptions (and a stl exception):

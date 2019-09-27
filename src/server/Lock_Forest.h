@@ -9,10 +9,6 @@
 #include <string>
 #include <vector>
 
-#define LOCK_CREATE_CREATED			0x00
-#define LOCK_CREATE_QUEUED			0x01
-#define LOCK_CREATE_EXISTS			0x02
-
 namespace server {
 
 /* Prototypes */
@@ -32,8 +28,11 @@ protected:
 public:
 	~Lock_Forest ();
 
-	/* Returns one out of LOCK_CREATE_* */
-	int create (Process *p, const std::string *path_str);
+	/* Returns one out of LOCK_CREATE_*. If acquire_X is true, the new lock will
+	 * be acquired in X mode upon creation. Otherwise a parent lock must be
+	 * held in X mode by the requesting Process or LOCK_CREATE_PARENT_NOT_HELD
+	 * will be returned. */
+	int create (Process *p, const std::string *path_str, const bool acquire_X);
 	void for_each_lock (std::function<void(const Lock*l, const uint32_t level)> f) const;
 
 	/* Returns one out of LOCK_ACQUIRE_*, mode is one out of LOCK_REQUEST_MODE_* */

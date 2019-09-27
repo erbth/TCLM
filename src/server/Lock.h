@@ -23,6 +23,11 @@
 #define LOCK_DESTROY_NON_EXCLUSIVE	0x01
 #define LOCK_DESTROY_NON_EXISTENT	0x02
 
+#define LOCK_CREATE_CREATED			0x00
+#define LOCK_CREATE_QUEUED			0x01
+#define LOCK_CREATE_EXISTS			0x02
+#define LOCK_CREATE_PARENT_NOT_HELD 0x03
+
 namespace server {
 
 /* Prototypes */
@@ -61,7 +66,21 @@ public:
 
 	const std::string get_name () const;
 
-	/* Returns on of LOCK_ACQUIRE_*. LOCK_ACQUIRE_NON_EXISTENT will only by
+	/* Creates a lock that is not initially held. This means one of its parents
+	 * must be held in X mode by the requesting process. If that is not the
+	 * case, LOCK_CREATE_PARENT_NOT_HELD is returned. To create a lock that is
+	 * owned initially, use acquire with create_missing set to true in the
+	 * request. This method returns one of LOCK_CREATE_*, anyway. */
+	int create_not_held (Process *p, std::shared_ptr<std::vector<std::string>> path);
+
+protected:
+	int create_not_held (
+			Process *p,
+			std::shared_ptr<std::vector<std::string>> path,
+			uint32_t current_level, uint32_t level, bool ownership_ensured);
+
+public:
+	/* Returns one of LOCK_ACQUIRE_*. LOCK_ACQUIRE_NON_EXISTENT will only by
 	 * returned if create_missing is false and the lock does not exist.
 	 *
 	 * If insert_in_current_queue is false, the request will only be queued if

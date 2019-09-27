@@ -362,6 +362,8 @@ void daemon::receive_message_create_lock (shared_ptr<Connection> c, struct strea
 	uint32_t pid = stream_read_uint32_t (input);
 	uint16_t path_length = stream_read_uint16_t (input);
 	string path ((char*) stream_pointer (input), path_length);
+	stream_seek(input, stream_tell(input) + path_length);
+	bool acquire_X = stream_read_uint8_t (input) > 0;
 
 	update_pid_connection(pid, c);
 
@@ -379,8 +381,8 @@ void daemon::receive_message_create_lock (shared_ptr<Connection> c, struct strea
 	/* Cannot fail because the stream has enough capacity. */
 	write_message_header (s, MSG_ID_CREATE_LOCK_UPDATE, 4 + 2 + path_length + 2);
 
-	/* Query backend */
-	auto ret = b.create_lock (pid, &path);
+	/* Call backend */
+	auto ret = b.create_lock (pid, &path, acquire_X);
 
 	uint16_t status_code = RESPONSE_STATUS_NO_SUCH_PROCESS;
 	switch (ret)
@@ -395,6 +397,10 @@ void daemon::receive_message_create_lock (shared_ptr<Connection> c, struct strea
 
 		case CREATE_LOCK_RESULT_EXISTS:
 			status_code = RESPONSE_STATUS_LOCK_EXISTS;
+			break;
+
+		case CREATE_LOCK_RESULT_PARENT_NOT_HELD:
+			status_code = RESPONSE_STATUS_PARENT_NOT_HELD;
 			break;
 	}
 

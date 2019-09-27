@@ -43,7 +43,7 @@ shared_ptr<vector<string>> Lock_Forest::split_path (const string *path)
 	return v;
 }
 
-int Lock_Forest::create (Process *p, const string *path_str)
+int Lock_Forest::create (Process *p, const string *path_str, const bool acquire_X)
 {
 	unique_lock lk(m);
 	auto path = split_path (path_str);
@@ -59,31 +59,43 @@ int Lock_Forest::create (Process *p, const string *path_str)
 	auto i_root = roots.find ((*path)[0]);
 	if (i_root == roots.end())
 	{
-		auto l = new Lock ((*path)[0]);
-		i_root = (roots.insert (pair ((*path)[0], l))).first;
-		req->lock_created = true;
+		if (acquire_X)
+		{
+			/* We can create it only if we can acquire it. Otherwise we are not
+			 * able to protect the new lock. */
+			auto l = new Lock ((*path)[0]);
+			i_root = (roots.insert (pair ((*path)[0], l))).first;
+			req->lock_created = true;
+		}
+		else
+			return LOCK_CREATE_PARENT_NOT_HELD;
 	}
 
-	/* Is a subtree node requested? */
-	auto ret = i_root->second->acquire(req);
-
-	switch (ret)
+	/* Create subtree nodes */
+	if (acquire_X)
 	{
-		case LOCK_ACQUIRE_ACQUIRED:
-			p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
-			if (req->lock_created)
-				return LOCK_CREATE_CREATED;
-			else
+		auto ret = i_root->second->acquire(req);
+
+		switch (ret)
+		{
+			case LOCK_ACQUIRE_ACQUIRED:
+				p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
+				if (req->lock_created)
+					return LOCK_CREATE_CREATED;
+				else
+					return LOCK_CREATE_EXISTS;
+
+			case LOCK_ACQUIRE_QUEUED:
+				p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
+				return LOCK_CREATE_QUEUED;
+
+			default:
+				/* Cannot happen. */
 				return LOCK_CREATE_EXISTS;
-
-		case LOCK_ACQUIRE_QUEUED:
-			p->add_held_lock (path_str, LOCK_REQUEST_MODE_X);
-			return LOCK_CREATE_QUEUED;
-
-		default:
-			/* Cannot happen. */
-			return LOCK_CREATE_EXISTS;
+		}
 	}
+	else
+		return i_root->second->create_not_held(p, path);
 }
 
 int Lock_Forest::acquire (Process *p, const std::string *path_str, uint8_t mode)

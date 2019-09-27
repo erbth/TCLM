@@ -1,3 +1,10 @@
+tclm (1.0.1) unstable; urgency=medium
+
+  * Fixed a livelock on exit if a pending lock requests exists.
+  * Allowed for optionally creating unowned locks if the parent is held.
+
+ -- Thomas Erbesdobler <t.erbesdobler@gmx.de>  Fri, 27 Sep 2019 21:24:35 +0200
+
 tclm (1.0.0) unstable; urgency=medium
 
   * Initial Release.

@@ -20,7 +20,7 @@ public:
 
 	/* Returns true if the lock was created. Otherwise false is returned and
 	 * a X lock acquired. */
-	bool create (std::shared_ptr<Process> p) override;
+	bool create (std::shared_ptr<Process> p, const bool acquire_X) override;
 	void destroy(std::shared_ptr<Process> p) override;
 
 	void acquire_S (std::shared_ptr<Process> p) override;

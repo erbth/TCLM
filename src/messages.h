@@ -34,6 +34,7 @@
 #define RESPONSE_STATUS_LOCK_EXISTS				0x0005
 #define RESPONSE_STATUS_LOCK_NOT_HELD			0x0006
 #define RESPONSE_STATUS_NO_SUCH_LOCK			0x0007
+#define RESPONSE_STATUS_PARENT_NOT_HELD			0x0008
 
 /* Lock modes in acquire_lock and release_lock messages */
 #define MSG_LOCK_MODE_S							0x00

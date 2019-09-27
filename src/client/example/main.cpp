@@ -46,7 +46,7 @@ int main (int argc, char** argv)
 
 	try {
 		root1 = tclmc->define_lock ("root1");
-		c = root1->create (p1);
+		c = root1->create (p1, true);
 	} catch (exception &e) {
 		cerr << e.what() << endl;
 		return EXIT_FAILURE;
