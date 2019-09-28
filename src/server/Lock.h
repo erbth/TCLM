@@ -46,13 +46,13 @@ protected:
 	std::vector<Lock*> children;
 
 	// For tracking the Lock's state
-	std::set<Process *> lockers_S;
+	std::multiset<Process *> lockers_S;
 	Process *locker_Splus = nullptr;
 	Process *locker_X = nullptr;
 
-	std::set<Process *> lockers_IS;
-	std::set<Process *> lockers_ISplus;
-	std::set<Process *> lockers_IX;
+	std::multiset<Process *> lockers_IS;
+	std::multiset<Process *> lockers_ISplus;
+	std::multiset<Process *> lockers_IX;
 
 	/* Lock Requests waiting on this lock */
 	std::deque<std::shared_ptr<Lock_Request>> lock_requests;

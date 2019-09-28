@@ -333,12 +333,16 @@ std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
 	{
 		bool removed = false;
 
-		remove_if (lock_requests.begin(), lock_requests.end(),
-				[p, mode, &removed](shared_ptr<Lock_Request> cr){
-					auto pred = mode == cr->mode && p == cr->requester;
-					removed |= pred;
-					return pred;
-				});
+		for (auto i = lock_requests.begin(); i != lock_requests.end(); i++)
+		{
+			auto cr = *i;
+
+			if (mode == cr->mode && p == cr->requester)
+			{
+				removed = true;
+				lock_requests.erase(i);
+			}
+		}
 
 		return pair(
 				(removed ? LOCK_RELEASE_SUCCESS : LOCK_RELEASE_NOT_HELD),
