@@ -112,7 +112,7 @@ bool Connection::data_in ()
 
 				if (s)
 				{
-					if (stream_ensure_remaining_capacity (s, wanted_ib_size))
+					if (stream_ensure_remaining_capacity (s, wanted_ib_size) == 0)
 					{
 						receive_buffer.read (stream_pointer(s), wanted_ib_size);
 						stream_set_length (s, wanted_ib_size);
