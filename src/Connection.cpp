@@ -104,7 +104,7 @@ bool Connection::data_in ()
 					stream_free (s);
 			}
 		}
-		else if (receive_buffer.size() >= wanted_ib_size)
+		else if (wanted_ib_size > 0 && receive_buffer.size() >= wanted_ib_size)
 		{
 			if (receive_callback)
 			{

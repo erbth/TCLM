@@ -161,6 +161,10 @@ bool Communications_Manager::add_polled_fd (shared_ptr<polled_fd> pfd)
 	{
 		struct epoll_event event = { 0 };
 		event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
+
+		if (pfd->get_out_enabled ())
+			event.events |= EPOLLOUT;
+
 		event.data.ptr = (void*) pfd.get();
 
 		if (epoll_ctl (epfd, EPOLL_CTL_ADD, pfd->get_fd(), &event) < 0)

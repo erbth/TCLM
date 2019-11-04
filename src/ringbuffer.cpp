@@ -76,7 +76,7 @@ void ringbuffer::write (const uint8_t *data, unsigned long length)
 	}
 
 	if (capacity - 1 - s < length)
-		throw ENOMEM;
+		throw errno_exception(ENOMEM);
 
 	// Actually write to the buffer
 	if (capacity - writepos >= length)
