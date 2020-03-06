@@ -55,84 +55,95 @@ bool Connection::data_in ()
 		receive_buffer.write (buf, count);
 
 		/* See if a whole message came in yet and maybe call the receive
-		 * callback. */
-		if (wanted_ib_size == 0 && receive_buffer.size() >= 5)
+		 * callback. Note that multiple messages may arrive at once. */
+		int progress = 1;
+
+		while (progress)
 		{
-			/* Extract the message header */
-			struct stream *s = stream_new ();
+			progress = 0;
 
-			if (s)
+			if (wanted_ib_size == 0 && receive_buffer.size() >= 5)
 			{
-				if (stream_ensure_remaining_capacity (s, 5) == 0)
-				{
-					receive_buffer.peek (stream_pointer (s), 5);
-					stream_set_length (s, 5);
-
-					stream_read_uint8_t (s);
-					wanted_ib_size = 5 + stream_read_uint32_t (s);
-
-					if (receive_buffer.size() >= wanted_ib_size)
-					{
-						if (receive_callback)
-						{
-							if (stream_ensure_remaining_capacity (s, wanted_ib_size - 5) == 0)
-							{
-								receive_buffer.remove(5);
-								receive_buffer.read (stream_pointer(s), wanted_ib_size - 5);
-								stream_seek(s,0);
-								stream_set_length(s,wanted_ib_size);
-
-								auto cb = receive_callback;
-								auto cbd = receive_callback_data;
-
-								rlk.unlock();
-								cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
-								rlk.lock();
-
-								s = nullptr;
-							}
-						}
-						else
-							receive_buffer.remove (wanted_ib_size);
-
-						// Reset the wanted size to read the next message
-						wanted_ib_size = 0;
-					}
-				}
-
-				if (s)
-					stream_free (s);
-			}
-		}
-		else if (wanted_ib_size > 0 && receive_buffer.size() >= wanted_ib_size)
-		{
-			if (receive_callback)
-			{
+				/* Extract the message header */
 				struct stream *s = stream_new ();
 
 				if (s)
 				{
-					if (stream_ensure_remaining_capacity (s, wanted_ib_size) == 0)
+					if (stream_ensure_remaining_capacity (s, 5) == 0)
 					{
-						receive_buffer.read (stream_pointer(s), wanted_ib_size);
-						stream_set_length (s, wanted_ib_size);
+						receive_buffer.peek (stream_pointer (s), 5);
+						stream_set_length (s, 5);
 
-						auto cb = receive_callback;
-						auto cbd = receive_callback_data;
+						stream_read_uint8_t (s);
+						wanted_ib_size = 5 + stream_read_uint32_t (s);
 
-						rlk.unlock();
-						cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
-						rlk.lock();
+						if (receive_buffer.size() >= wanted_ib_size)
+						{
+							progress = 1;
+
+							if (receive_callback)
+							{
+								if (stream_ensure_remaining_capacity (s, wanted_ib_size - 5) == 0)
+								{
+									receive_buffer.remove(5);
+									receive_buffer.read (stream_pointer(s), wanted_ib_size - 5);
+									stream_seek(s,0);
+									stream_set_length(s,wanted_ib_size);
+
+									auto cb = receive_callback;
+									auto cbd = receive_callback_data;
+
+									rlk.unlock();
+									cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
+									rlk.lock();
+
+									s = nullptr;
+								}
+							}
+							else
+								receive_buffer.remove (wanted_ib_size);
+
+							// Reset the wanted size to read the next message
+							wanted_ib_size = 0;
+						}
 					}
-					else
+
+					if (s)
 						stream_free (s);
 				}
 			}
-			else
-				receive_buffer.remove (wanted_ib_size);
+			else if (wanted_ib_size > 0 && receive_buffer.size() >= wanted_ib_size)
+			{
+				progress = 1;
 
-			// Reset the wanted size to read the next message
-			wanted_ib_size = 0;
+				if (receive_callback)
+				{
+					struct stream *s = stream_new ();
+
+					if (s)
+					{
+						if (stream_ensure_remaining_capacity (s, wanted_ib_size) == 0)
+						{
+							receive_buffer.read (stream_pointer(s), wanted_ib_size);
+							stream_set_length (s, wanted_ib_size);
+
+							auto cb = receive_callback;
+							auto cbd = receive_callback_data;
+
+							rlk.unlock();
+							cb (static_pointer_cast<Connection>(shared_from_this()), s, cbd);
+							rlk.lock();
+						}
+						else
+							stream_free (s);
+					}
+				}
+				else
+					receive_buffer.remove (wanted_ib_size);
+
+				// Reset the wanted size to read the next message
+				wanted_ib_size = 0;
+			}
 		}
 	}
 	else if (count == 0 || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))
