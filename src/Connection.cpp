@@ -158,6 +158,14 @@ bool Connection::data_in ()
 bool Connection::data_out ()
 {
 	lock_guard slk(m_send);
+
+	if (send_queue.size() == 0)
+	{
+		lock_guard glk(m);
+		mgr->fd_disable_out (this);
+		return true;
+	}
+
 	auto s = send_queue.front();
 
 	ssize_t count;
@@ -201,14 +209,18 @@ void Connection::send (struct stream *s)
 		send_queue.push (s);
 	}
 
-	lock_guard glk(m);
+	unique_lock glk(m);
 
 	if (!out_enabled)
 	{
 		/* If a Communications Manager is available, ask it else do it yourself.
 		 * The Communications Manager will pick it up once you are added to one. */
 		if (mgr)
+		{
+			/* Give control to the communications manager */
+			glk.unlock();
 			mgr->fd_enable_out (this);
+		}
 		else
 			out_enabled = true;
 	}
