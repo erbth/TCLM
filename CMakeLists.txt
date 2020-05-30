@@ -20,7 +20,7 @@ option(BUILD_MANAGER "Build tclm" OFF)
 option(BUILD_CPP_CLIENT "Build libtclm_client" ON)
 option(BUILD_PYTHON_CLIENT "Build the tclm_python_client python module" OFF)
 
-option(BUIILD_ALL "Build all components" OFF)
+option(BUILD_ALL "Build all components" OFF)
 
 if (BUILD_PYTHON_CLIENT)
 	set(BUILD_CPP_CLIENT ON)
