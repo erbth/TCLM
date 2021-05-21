@@ -72,7 +72,7 @@ bool Access_Concentrator::create_tcp_connection() noexcept
 					((struct sockaddr_in6*) addr)->sin6_port = htons (tcp_port);
 
 				/* Try to connect */
-				int fd = socket (ai->ai_family, ai->ai_socktype, 0);
+				int fd = socket (ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, 0);
 				if (fd)
 				{
 					if (connect (fd, addr, addrlen) == 0)

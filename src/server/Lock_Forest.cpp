@@ -139,7 +139,7 @@ std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock_Forest::release (
 	if (tr.first == LOCK_RELEASE_SUCCESS)
 		p->remove_held_lock(path_str, mode);
 
-	return move(tr);
+	return tr;
 }
 
 void Lock_Forest::for_each_lock (function<void(const Lock *l, const uint32_t level)> f) const
