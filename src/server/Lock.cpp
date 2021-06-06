@@ -219,6 +219,8 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 		else
 		{
 			lk.unlock();
+			// TODO: handle result properly (notify waiting processes as
+			// required) for multi-threading.
 			release (r->requester, r->mode, r->path, 0, r->level);
 			r->acquire_status = LOCK_ACQUIRE_NON_EXISTENT;
 			return LOCK_ACQUIRE_NON_EXISTENT;
