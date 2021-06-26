@@ -28,7 +28,7 @@ void receive_list_conns_response (shared_ptr<Connection> c, struct stream *s, ar
 	if (ap->action == "list-connections")
 	{
 		printf ("Connections to tclmd:\n"
-				"-------------------------------------------------------\n");
+				"--------------------------------------------------------------------------------\n");
 
 		while (stream_tell(s) < length)
 		{
@@ -62,7 +62,7 @@ void receive_list_processes_response (shared_ptr<Connection> c, struct stream *s
 	{
 		printf ("Registered Processes:\n"
 				"    id               lock_count\n"
-				"-------------------------------------------------------\n");
+				"--------------------------------------------------------------------------------\n");
 
 		while (stream_tell(s) < length)
 		{
@@ -82,7 +82,7 @@ void receive_list_locks_response (shared_ptr<Connection> c, struct stream *s, ar
 	{
 		printf ("Created Locks:\n"
 				"name:status\n"
-				"-------------------------------------------------------\n");
+				"--------------------------------------------------------------------------------\n");
 
 		while (stream_tell(s) < length)
 		{
@@ -108,6 +108,112 @@ void receive_list_locks_response (shared_ptr<Connection> c, struct stream *s, ar
 	}
 }
 
+void receive_list_locks_process_response (shared_ptr<Connection> c, struct stream *s,
+		argument_parser *ap, uint32_t length)
+{
+	static unsigned cnt_received = 0;
+
+	if (ap->action == "list-locks")
+	{
+		if (cnt_received++ == 0)
+		{
+			printf ("Locks of processes:\n"
+					"  pid    mode                    path\n"
+					"--------------------------------------------------------------------------------\n");
+		}
+
+		length -= stream_tell(s);
+		if (length < 6)
+			goto END;
+
+		uint32_t pid = stream_read_uint32_t (s);
+		uint16_t status = stream_read_uint16_t (s);
+		length -= 6;
+
+		if (status != RESPONSE_STATUS_SUCCESS)
+		{
+			printf ("%8d: no such process.\n", (int) pid);
+		}
+		else
+		{
+			while (length > 2)
+			{
+				unsigned strlength = stream_read_uint16_t (s);
+				if (strlength + 2 + 1 > length)
+					break;
+
+				string path ((const char*) stream_pointer(s), strlength);
+				stream_seek (s, stream_tell(s) + strlength);
+				uint8_t mode = stream_read_uint8_t (s);
+
+				string mode_str;
+				switch (mode)
+				{
+					case MSG_LOCK_MODE_S:
+						mode_str = "S ";
+						break;
+
+					case MSG_LOCK_MODE_Splus:
+						mode_str = "S+";
+						break;
+
+					case MSG_LOCK_MODE_X:
+						mode_str = "X ";
+						break;
+
+					default:
+						mode_str = "? ";
+						break;
+				}
+
+				printf ("%8d: %s %s\n", pid, mode_str.c_str(), path.c_str());
+
+				length -= strlength + 2 + 1;
+			}
+		}
+	}
+
+END:
+	if (cnt_received == ap->names.size())
+		c->get_mgr()->request_quit();
+}
+
+void receive_unregister_process_response (shared_ptr<Connection> c, struct stream *s,
+		argument_parser *ap, uint32_t length)
+{
+	if (ap->action != "kill")
+		return;
+
+	if (length == stream_tell(s) + 6)
+	{
+		uint32_t pid = stream_read_uint32_t (s);
+		uint16_t status = stream_read_uint16_t (s);
+
+		switch (status)
+		{
+			case RESPONSE_STATUS_SUCCESS:
+				printf ("Process %d killed.\n", (int) pid);
+				break;
+
+			case RESPONSE_STATUS_NO_SUCH_PROCESS:
+				printf ("No process %d found.\n", (int) pid);
+				break;
+
+			case RESPONSE_STATUS_PROCESS_HOLDS_LOCKS:
+				/* Should not happen as tclmd releases the locks on unregister.
+				 * */
+				printf ("Process %d holds locks.\n", (int) pid);
+				break;
+
+			default:
+				printf ("Unknown status returned by tclm.\n");
+				break;
+		}
+	}
+
+	c->get_mgr()->request_quit();
+}
+
 /* Receive a message */
 void receive_message (shared_ptr<Connection> c, struct stream *s, void *data)
 {
@@ -130,6 +236,14 @@ void receive_message (shared_ptr<Connection> c, struct stream *s, void *data)
 		case MSG_ID_LIST_LOCKS_RESPONSE:
 			receive_list_locks_response (c, s, ap, length);
 			break;
+
+		case MSG_ID_LIST_LOCKS_PROCESS_RESPONSE:
+			receive_list_locks_process_response (c, s, ap, length);
+			break;
+
+		case MSG_ID_UNREG_PROC_RESPONSE:
+			receive_unregister_process_response (c, s, ap, length);
+			break;
 	}
 
 	stream_free (s);
@@ -142,9 +256,11 @@ void print_help_message ()
 	cout << "\ntclm ... <parameters> ... <action> ... <parameters> ... <names> ...\n"
 
 		<< "\nActions:\n"
-		<< "    list-connections:    List all connections to the deamon including this one.\n"
-		<< "    list-processes:      List the registered processes with their lock_counts.\n"
-		<< "    list-locks:          List all locks and their status.\n"
+		<< "    list-connections         List all connections to the deamon including this one.\n"
+		<< "    list-processes           List the registered processes with their lock_counts.\n"
+		<< "    list-locks               List all locks and their status.\n"
+		<< "    list-locks <pid>,...     List locks held by a process.\n"
+		<< "    kill <pid>               Kill a process.\n"
 
 		<< "\nParameters:\n"
 		<< "    -h, --help:          Do nothing but print a help message (this one).\n"
@@ -169,12 +285,42 @@ int main (int argc, char** argv)
 
 	string server_name = "127.0.0.1";
 
+	/* Validate parameters */
 	if (ap.action == "list-connections")
 	{}
 	else if (ap.action == "list-processes")
 	{}
 	else if (ap.action == "list-locks")
-	{}
+	{
+		for (const auto& name : ap.names)
+		{
+			for (const auto c : name)
+			{
+				if (c < '0' || c > '9')
+				{
+					cerr << "Invalid pid '" << name << "'." << endl;
+					return EXIT_FAILURE;
+				}
+			}
+		}
+	}
+	else if (ap.action == "kill")
+	{
+		if (ap.names.size() != 1)
+		{
+			cerr << "'kill' requires exactly one argument." << endl;
+			return EXIT_FAILURE;
+		}
+
+		for (const auto c : ap.names[0])
+		{
+			if (c < '0' || c > '9')
+			{
+				cerr << "Invalid pid." << endl;
+				return EXIT_FAILURE;
+			}
+		}
+	}
 	else if (ap.action.size() == 0)
 	{
 		cerr << "No action specified." << endl;
@@ -281,11 +427,44 @@ int main (int argc, char** argv)
 		}
 		else if (ap.action == "list-locks")
 		{
-			if (!write_message_header (s, MSG_ID_LIST_LOCKS, 0))
+			if (ap.names.empty())
+			{
+				if (!write_message_header (s, MSG_ID_LIST_LOCKS, 0))
+				{
+					cerr << "Out of memory." << endl;
+					return EXIT_FAILURE;
+				}
+				c->send(s);
+			}
+			else
+			{
+				stream_free (s);
+				for (const auto& name : ap.names)
+				{
+					s = stream_new();
+
+					if (!write_message_header (s, MSG_ID_LIST_LOCKS_PROCESS, 4) ||
+							stream_ensure_remaining_capacity (s, 4) < 0)
+					{
+						cerr << "Out of memory." << endl;
+						return EXIT_FAILURE;
+					}
+
+					stream_write_uint32_t (s, stoi (name));
+					c->send(s);
+				}
+			}
+		}
+		else if (ap.action == "kill")
+		{
+			if (!write_message_header (s, MSG_ID_UNREG_PROC, 4) ||
+					stream_ensure_remaining_capacity (s, 4) < 0)
 			{
 				cerr << "Out of memory." << endl;
 				return EXIT_FAILURE;
 			}
+
+			stream_write_uint32_t (s, stoi (ap.names[0]));
 			c->send(s);
 		}
 

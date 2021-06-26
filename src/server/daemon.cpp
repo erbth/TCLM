@@ -154,6 +154,10 @@ void daemon::receive_message_internal (shared_ptr<Connection> c, struct stream *
 			receive_message_list_locks (c, s, length);
 			break;
 
+		case MSG_ID_LIST_LOCKS_PROCESS:
+			receive_message_list_locks_of_process (c, s, length);
+			break;
+
 		case MSG_ID_REG_PROC:
 			receive_message_register_process (c, s, length);
 			break;
@@ -349,6 +353,60 @@ void daemon::receive_message_list_locks (shared_ptr<Connection> c, struct stream
 
 				stream_write_uint8_t (s, status);
 			});
+
+	/* Update the message's length */
+	update_message_length (s, stream_tell(s));
+
+	/* Send a message */
+	c->send (s);
+}
+
+void daemon::receive_message_list_locks_of_process (
+		shared_ptr<Connection> c, struct stream *input, uint32_t length)
+{
+	if (length != 4)
+		return;
+
+	uint32_t pid = stream_read_uint32_t (input);
+
+	/* Crete new stream */
+	auto s = stream_new();
+	if (!s || !write_message_header (s, MSG_ID_LIST_LOCKS_PROCESS_RESPONSE, 0))
+		throw bad_alloc ();
+
+	/* Call the backend */
+	{
+		auto [process, witness] = b.find_process (pid);
+		if (!process)
+		{
+			if (stream_ensure_remaining_capacity (s, 6) < 0)
+				throw bad_alloc();
+
+			stream_write_uint32_t (s, pid);
+			stream_write_uint16_t (s, RESPONSE_STATUS_NO_SUCH_PROCESS);
+		}
+		else
+		{
+			if (stream_ensure_remaining_capacity (s, 6) < 0)
+				throw bad_alloc();
+
+			stream_write_uint32_t (s, pid);
+			stream_write_uint16_t (s, RESPONSE_STATUS_SUCCESS);
+
+			/* Write locks */
+			for (const auto& [path, mode] : process->get_held_locks())
+			{
+				if (stream_ensure_remaining_capacity (s, path.size() + 1 + 2) < 0)
+					throw bad_alloc();
+
+				stream_write_uint16_t (s, path.size());
+				memcpy (stream_pointer(s), path.c_str(), path.size());
+				stream_set_length (s, stream_length(s) + path.size());
+				stream_seek (s, stream_tell(s) + path.size());
+				stream_write_uint8_t (s, mode);
+			}
+		}
+	}
 
 	/* Update the message's length */
 	update_message_length (s, stream_tell(s));

@@ -27,6 +27,9 @@ protected:
 	void receive_message_list_connections (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
 	void receive_message_list_processes (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
 	void receive_message_list_locks (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+	void receive_message_list_locks_of_process (
+			std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
+
 	void receive_message_register_process (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
 	void receive_message_unregister_process (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);
 	void receive_message_create_lock (std::shared_ptr<Connection> c, struct stream *input, uint32_t length);

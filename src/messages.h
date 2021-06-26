@@ -20,6 +20,8 @@
 #define MSG_ID_RELEASE_LOCK_RESPONSE			0x0E
 #define MSG_ID_ACQUIRE_LOCK						0x0F
 #define MSG_ID_ACQUIRE_LOCK_UPDATE				0x10
+#define MSG_ID_LIST_LOCKS_PROCESS				0x11
+#define MSG_ID_LIST_LOCKS_PROCESS_RESPONSE		0x12
 
 /* server_error codes */
 #define SE_MSG_TOO_LONG							0x0001
