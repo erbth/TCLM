@@ -343,6 +343,7 @@ std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
 			{
 				removed = true;
 				lock_requests.erase(i);
+				break;
 			}
 		}
 
