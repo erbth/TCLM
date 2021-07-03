@@ -1,3 +1,9 @@
+tclm (1.0.4+1) unstable; urgency=medium
+
+  * Fixed exit condition of a loop
+
+ -- Thomas Erbesdobler <t.erbesdobler@gmx.de>  Sat, 03 Jul 2021 22:12:49 +0200
+
 tclm (1.0.4) unstable; urgency=medium
 
   * Fix for locks advancing in response to releasing a lock

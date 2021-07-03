@@ -354,24 +354,21 @@ std::pair<int,std::set<std::shared_ptr<Lock_Request>>> Lock::release (
 	else
 	{
 		/* Look if another lock request can be granted now */
-		for (;;)
+		while (lock_requests.size() > 0)
 		{
 			/* The lock request may have advanced. Remove it from the queue in
 			 * such a case. */
-			if (lock_requests.size() > 0)
-			{
-				auto r = lock_requests.front();
-				auto old_level = r->current_level;
+			auto r = lock_requests.front();
+			auto old_level = r->current_level;
 
-				if (acquire (r, false) != LOCK_ACQUIRE_QUEUED)
-				{
-					answered_requests.insert (lock_requests.front());
-					lock_requests.pop_front();
-				}
-				else if (r->current_level > old_level)
-				{
-					lock_requests.pop_front();
-				}
+			if (acquire (r, false) != LOCK_ACQUIRE_QUEUED)
+			{
+				answered_requests.insert (lock_requests.front());
+				lock_requests.pop_front();
+			}
+			else if (r->current_level > old_level)
+			{
+				lock_requests.pop_front();
 			}
 			else
 			{
