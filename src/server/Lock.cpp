@@ -154,7 +154,9 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 				}
 				else
 				{
-					lock_requests.push_back (r);
+					if (insert_in_current_queue)
+						lock_requests.push_back (r);
+
 					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
@@ -169,7 +171,9 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 				}
 				else
 				{
-					lock_requests.push_back (r);
+					if (insert_in_current_queue)
+						lock_requests.push_back (r);
+
 					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
@@ -184,7 +188,9 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 				}
 				else
 				{
-					lock_requests.push_back (r);
+					if (insert_in_current_queue)
+						lock_requests.push_back (r);
+
 					r->acquire_status = LOCK_ACQUIRE_QUEUED;
 					return LOCK_ACQUIRE_QUEUED;
 				}
