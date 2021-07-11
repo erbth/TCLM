@@ -112,7 +112,9 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 			case LOCK_REQUEST_MODE_Splus:
 				/* S+ */
 				if (locker_Splus == nullptr && lockers_ISplus.size() == 0 &&
-						(locker_X == nullptr || locker_X == r->requester))
+						(locker_X == nullptr || locker_X == r->requester) &&
+						(all_of (lockers_IX.cbegin(), lockers_IX.cend(),
+								 [r](const Process* p){return r->requester == p;})))
 				{
 					locker_Splus = r->requester;
 					r->acquire_status = LOCK_ACQUIRE_ACQUIRED;
