@@ -113,6 +113,9 @@ public:
 
 	/* For status reporting */
 	void for_each_child (std::function<void(const Lock *l, const uint32_t level)> f, uint32_t level) const;
+	bool is_IS_locked () const;
+	bool is_ISplus_locked () const;
+	bool is_IX_locked () const;
 	bool is_S_locked () const;
 	bool is_Splus_locked () const;
 	bool is_X_locked () const;

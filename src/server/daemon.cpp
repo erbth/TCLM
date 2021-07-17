@@ -342,6 +342,15 @@ void daemon::receive_message_list_locks (shared_ptr<Connection> c, struct stream
 
 				uint8_t status = 0;
 
+				if (l->is_IS_locked())
+					status |= 0x40;
+
+				if (l->is_ISplus_locked())
+					status |= 0x20;
+
+				if (l->is_IX_locked())
+					status |= 0x10;
+
 				if (l->is_S_locked())
 					status |= 0x4;
 

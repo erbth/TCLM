@@ -97,8 +97,11 @@ void receive_list_locks_response (shared_ptr<Connection> c, struct stream *s, ar
 				indent += "  ";
 
 			string status =
-					string(status_bits & 0x4 ? "S" : " ")
-					+ (status_bits & 0x2 ? "S+" : " ")
+					string(status_bits & 0x40 ? "IS " : "   ")
+					+ (status_bits & 0x20 ? "IS+ " : "    ")
+					+ (status_bits & 0x10 ? "IX " : "   ")
+					+ (status_bits & 0x4 ? "S " : "  ")
+					+ (status_bits & 0x2 ? "S+ " : "   ")
 					+ (status_bits & 0x1 ? "X" : " ");
 
 			printf ("%s%s:%s\n", indent.c_str(), name.c_str(), status.c_str());

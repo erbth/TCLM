@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdio>
 #include <memory>
+#include <vector>
 
 using namespace std;
 
@@ -98,6 +99,58 @@ int main (int argc, char** argv)
 
 	cout << "Press return to continue." << endl;
 	getchar();
+
+	cout << "----------------------------------------------------------------------\n"
+		"Demonstrating a lock hierarchy:" << endl;
+
+	vector<shared_ptr<tclm_client::Lock>> locks;
+	locks.push_back(tclmc->define_lock("a"));
+	locks.push_back(tclmc->define_lock("a.b"));
+	locks.push_back(tclmc->define_lock("a.b.c"));
+	locks.push_back(tclmc->define_lock("a.b.c.d"));
+	locks.push_back(tclmc->define_lock("a.b.c.e"));
+	locks.push_back(tclmc->define_lock("a.f"));
+
+	for (auto lk : locks)
+	{
+		lk->create(p1, true);
+		lk->release_X(p1);
+
+		cout << "  Created '" << lk->get_path() << "'." << endl;
+	}
+
+	cout << endl;
+
+	for (auto lk : locks)
+	{
+		lk->acquire_S(p1);
+		cout << "  " << lk->get_path() << " acquired S" << endl;
+		getchar();
+
+		lk->acquire_Splus(p1);
+		cout << "  " << lk->get_path() << " acquired S+" << endl;
+		getchar();
+
+		lk->release_S(p1);
+		cout << "  " << lk->get_path() << " released S" << endl;
+		getchar();
+
+		lk->acquire_X(p1);
+		cout << "  " << lk->get_path() << " acquired X" << endl;
+		getchar();
+
+		lk->release_Splus(p1);
+		cout << "  " << lk->get_path() << " released S+" << endl;
+		getchar();
+
+		lk->release_X(p1);
+		cout << "  " << lk->get_path() << " released X" << endl;
+		getchar();
+	}
+
+	locks[1]->acquire_S(p1);
+	cout << "deadlock." << endl;
+	locks[0]->acquire_X(p1);
 
 	return EXIT_SUCCESS;
 }

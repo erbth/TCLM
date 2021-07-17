@@ -448,6 +448,24 @@ void Lock::for_each_child (function<void(const Lock *l, const uint32_t level)> f
 	}
 }
 
+bool Lock::is_IS_locked () const
+{
+	scoped_lock lk(m);
+	return lockers_IS.size() != 0;
+}
+
+bool Lock::is_ISplus_locked () const
+{
+	scoped_lock lk(m);
+	return lockers_ISplus.size() != 0;
+}
+
+bool Lock::is_IX_locked () const
+{
+	scoped_lock lk(m);
+	return lockers_IX.size() != 0;
+}
+
 bool Lock::is_S_locked () const
 {
 	scoped_lock lk(m);
