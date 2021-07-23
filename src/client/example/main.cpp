@@ -100,6 +100,21 @@ int main (int argc, char** argv)
 	cout << "Press return to continue." << endl;
 	getchar();
 
+	cout << "Trying to lock a non-existent child lock (root1.c1.child) ..." << endl;
+	auto lk17 = tclmc->define_lock("root1.c1");
+	lk17->create(p1, true);
+	lk17->release_X(p1);
+	auto non_existent_lk = tclmc->define_lock("root1.c1.child");
+	try {
+		non_existent_lk->acquire_S(p1);
+	} catch (exception& e) {
+		cout << e.what() << endl;
+	}
+
+
+	cout << "Press return to continue." << endl;
+	getchar();
+
 	cout << "----------------------------------------------------------------------\n"
 		"Demonstrating a lock hierarchy:" << endl;
 

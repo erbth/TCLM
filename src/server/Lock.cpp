@@ -205,12 +205,41 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 			auto c = *i;
 			if (c->name == (*(r->path))[r->current_level + 1])
 			{
-				/* Don't block what we don't need. As we have a I? on this lock,
+				/* TODO if implementing multithreading:
+				 * Don't block what we don't need. As we have a I? on this lock,
 				 * no X can be acquired on any lock on the path to the root and
-				 * hence the child cannot be deleted. */
+				 * hence the child cannot be deleted. Hence the mutex (lk) could
+				 * be released.
+				 * However than releasing the lock in case a child lock did not
+				 * exist becomes more difficult because other lock requests may
+				 * have been queued while searching for the child, which may now
+				 * advance. */
 				r->current_level++;
-				lk.unlock ();
-				return c->acquire (r, true);
+				auto ret = c->acquire (r, true);
+
+				/* If a child lock did not exist, release the intent lock. */
+				if (ret == LOCK_ACQUIRE_NON_EXISTENT)
+				{
+					switch (r->mode)
+					{
+						case LOCK_REQUEST_MODE_S:
+							/* IS */
+							lockers_IS.erase(lockers_IS.find(r->requester));
+							break;
+
+						case LOCK_REQUEST_MODE_Splus:
+							/* IS+ */
+							lockers_ISplus.erase(lockers_ISplus.find(r->requester));
+							break;
+
+						case LOCK_REQUEST_MODE_X:
+							/* IX */
+							lockers_IX.erase(lockers_IX.find(r->requester));
+							break;
+					}
+				}
+
+				return ret;
 			}
 		}
 
@@ -226,10 +255,25 @@ int Lock::acquire (shared_ptr<Lock_Request> r, bool insert_in_current_queue)
 		}
 		else
 		{
-			lk.unlock();
-			// TODO: handle result properly (notify waiting processes as
-			// required) for multi-threading.
-			release (r->requester, r->mode, r->path, 0, r->level);
+			/* Release intent lock */
+			switch (r->mode)
+			{
+				case LOCK_REQUEST_MODE_S:
+					/* IS */
+					lockers_IS.erase(lockers_IS.find(r->requester));
+					break;
+
+				case LOCK_REQUEST_MODE_Splus:
+					/* IS+ */
+					lockers_ISplus.erase(lockers_ISplus.find(r->requester));
+					break;
+
+				case LOCK_REQUEST_MODE_X:
+					/* IX */
+					lockers_IX.erase(lockers_IX.find(r->requester));
+					break;
+			}
+
 			r->acquire_status = LOCK_ACQUIRE_NON_EXISTENT;
 			return LOCK_ACQUIRE_NON_EXISTENT;
 		}
