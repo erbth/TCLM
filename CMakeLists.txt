@@ -38,7 +38,7 @@ set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
 
 if (BUILD_PYTHON_CLIENT)
-	find_package (PythonLibs 3 REQUIRED)
+	find_package (Python3 REQUIRED COMPONENTS Interpreter Development)
 	find_package (Boost REQUIRED COMPONENTS python3)
 endif()
 

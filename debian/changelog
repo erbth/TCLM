@@ -1,3 +1,9 @@
+tclm (1.0.6+deb12) unstable; urgency=medium
+
+  * Changes for newer toolchain on Debian Bookworm
+
+ -- Thomas Erbesdobler <t.erbesdobler@gmx.de>  Sat, 12 Oct 2024 21:45:51 +0200
+
 tclm (1.0.6+deb11u2) unstable; urgency=medium
 
   * Debian Bullseye version, i.e. without build-depnds dh-systemd

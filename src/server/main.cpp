@@ -11,7 +11,7 @@ using namespace std;
 using namespace server;
 
 /* The deamon; defined globally to be reached by the signal handler */
-shared_ptr<daemon> d;
+shared_ptr<server::daemon> d;
 
 /* Signal handler */
 void signal_handler (int signum)
@@ -31,7 +31,7 @@ int main (int argc, char** argv)
 	fflush (stdout);
 
 	/* Create a daemon */
-	d = make_shared<daemon>();
+	d = make_shared<server::daemon>();
 
 	/* Register a signal handler */
 	struct sigaction sa = { 0 };
