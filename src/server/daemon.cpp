@@ -5,6 +5,7 @@
 #include "message_utils.h"
 #include "messages.h"
 #include <cstring>
+#include <algorithm>
 #include <iostream>
 #include <new>
 

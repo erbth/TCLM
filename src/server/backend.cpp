@@ -25,7 +25,7 @@ void backend::for_each_process(function<void(const Process *p)> f) const
 
 pair<Process *, shared_lock<shared_mutex>> backend::find_process (const uint32_t id)
 {
-	return move(Processes.find(id));
+	return Processes.find(id);
 }
 
 int backend::create_lock (const uint32_t pid, string *path, const bool acquire_X)

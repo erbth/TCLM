@@ -1,6 +1,7 @@
 #ifndef __BACKEND_EXCEPTIONS_H
 #define __BACKEND_EXCEPTIONS_H
 
+#include <cstdint>
 #include <exception>
 #include <string>
 

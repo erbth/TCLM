@@ -1,6 +1,7 @@
 #ifndef __TCLM_CLIENT_EXCEPTIONS_HPP
 #define __TCLM_CLIENT_EXCEPTIONS_HPP
 
+#include <cstdint>
 #include <exception>
 #include <string>
 
