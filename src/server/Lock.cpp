@@ -447,8 +447,10 @@ pair<int, Lock*> Lock::destroy (Process *p, std::shared_ptr<std::vector<std::str
 			/* Hold parent and remove child */
 			{
 				scoped_lock plk(parent->m);
-				remove_if (parent->children.begin(), parent->children.end(),
-						[this](Lock *l){ return l == this; });
+				parent->children.erase(
+						remove_if (parent->children.begin(), parent->children.end(),
+							[this](Lock *l){ return l == this; }),
+						parent->children.end());
 
 				parent->release (p, LOCK_REQUEST_MODE_X, path, current_level - 1, level - 1);
 			}
